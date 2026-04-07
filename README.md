@@ -79,7 +79,7 @@ Http::asMultipart()->post('http://localhost:3001/send', [
 ---
 
 ## 📖 Detailed Documentation
-For full API references and advanced setup (GitHub Pages automation), please visit the **[Live Documentation Site](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/)**.
+For full API references, remote management, and **[24/7 Deployment Guides (PM2, Cloudflare, Railway)](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/deployment)**, please visit our documentation site.
 
 ---
 

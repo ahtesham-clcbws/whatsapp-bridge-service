@@ -6,7 +6,8 @@ export default {
     nav: [
       { text: "Home", link: "/" },
       { text: "API Reference", link: "/api" },
-      { text: "Session", link: "/session" }
+      { text: "Session", link: "/session" },
+      { text: "Deployment", link: "/deployment" }
     ],
     sidebar: [
       {
@@ -14,7 +15,8 @@ export default {
         items: [
           { text: "Getting Started", link: "/" },
           { text: "API Guide", link: "/api" },
-          { text: "Remote Session", link: "/session" }
+          { text: "Remote Session", link: "/session" },
+          { text: "24/7 Deployment", link: "/deployment" }
         ]
       }
     ],
