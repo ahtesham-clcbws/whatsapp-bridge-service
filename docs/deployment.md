@@ -69,14 +69,46 @@ Perfect for those who don't want to manage a Linux terminal.
     - Go to **Settings > Volumes**.
     - Add a Volume mounted at `/app/auth` (to keep your WhatsApp login) and `/app/logs` (for audit logs).
 
-### Render.com
-1.  **Sign Up**: [Sign Up via Render Affiliate Link]([YOUR_RENDER_AFFILIATE_LINK])
+### Render.com (Simple Web Services)
+1.  **Sign Up**: [Sign Up via Render](https://render.com)
 2.  **Web Service**: Connect your GitHub repo.
 3.  **Disk**: Add a **Persistent Disk** mounted at `/app/auth`.
+*Note: Render does not currently offer a public referral program.*
+
+### Fly.io (The Modern MicroVM) - **HIGH PERFORMANCE**
+1.  **Sign Up**: [Sign Up via Fly.io](https://fly.io)
+2.  **Install `flyctl`**: Follow the official guide to install the CLI on your machine.
+3.  **Deploy**: 
+    ```bash
+    # Login and Launch
+    fly auth login
+    fly launch
+    
+    # Create Volume for Persistence (1GB)
+    fly volumes create wa_data --size 1
+    
+    # Deploy (Uses the Project's fly.toml)
+    fly deploy
+    ```
+*Note: Fly.io does not currently offer a public referral program.*
 
 ---
 
-## ⚙️ 4. Server Essentials (The Zero-to-Live Commands)
+## 🏗️ 4. DigitalOcean (The Developer Standard)
+
+DigitalOcean offers both a simple "App Platform" and traditional "Droplets" (VPS).
+
+1.  **Sign Up**: [Sign Up via DigitalOcean](https://m.do.co/c/b2d7d9ede5f7)
+2.  **App Platform (Managed)**:
+    - Similar setup to Railway/Render.
+    - Add a **Volume** for `/app/auth`.
+3.  **Droplets (VPS)**:
+    - Deploy a $4-6/mo Droplet with Ubuntu.
+    - Follow the **Server Essentials** guide below.
+
+---
+
+## ⚙️ 5. Server Essentials (The Zero-to-Live Commands)
 
 Once logged into your Ubuntu/Linux server, run these in order:
 
