@@ -25,11 +25,25 @@ features:
     details: API-KEY protected, stateless architecture for absolute privacy.
 ---
 
+## 🚀 Project Progress (v1.3.0)
+
+### Current Features
+- [x] **Multipart Media API**: High-performance text/image/document dispatch.
+- [x] **Weekly SQLite Audit Logs**: Automated archiving and high-efficiency performance.
+- [x] **API-based Log Access**: Remote history retrieval via `/logs`.
+- [x] **Flexible Session Management**: QR Code and 8-digit Pairing Code support.
+- [x] **Universal SDK Support**: 11+ language examples (PHP, Laravel, React, Next.js, Go).
+
+### Future Roadmap
+- [ ] **Web Dashboard**: An integrated UI for log viewing and session control.
+- [ ] **Webhook Callbacks**: Forwarding incoming messages to your own server.
+- [ ] **Group Management**: Dedicated high-level API for WhatsApp Groups.
+- [ ] **Retry Engine**: Automatic in-memory/SQLite retries for unstable connections.
+- [ ] **Multi-Session Support**: Manage multiple WhatsApp accounts in one instance.
+
 ## 🛠️ Quick Installation
 
 ```bash
 npm install
 npm start
 ```
-
-For full details, proceed to the [API Guide](/api).
