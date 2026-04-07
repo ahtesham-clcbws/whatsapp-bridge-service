@@ -69,3 +69,8 @@ Instead of risky port-forwarding, use a **Cloudflare Tunnel**. This creates a se
 - **Firewall**: If using a VPS, only allow traffic on port `3001` from your production server's IP.
 - **Environment Variables**: Never commit your `.env` file to GitHub. Use the platform's "Environment Variables" settings instead.
 - **Session Backups**: Periodically back up the `auth/` directory if you are not using persistent volumes on cloud platforms.
+
+---
+
+> [!TIP]
+> **Scaling?** For high-volume environments, consider using a **Redis-based** session adapter (custom implementation) to share the WhatsApp state across multiple bridge instances.
