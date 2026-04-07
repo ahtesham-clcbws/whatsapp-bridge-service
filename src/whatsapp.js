@@ -18,6 +18,7 @@ const {
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
 const { Boom } = require('@hapi/boom');
+const { getDatabase } = require('./database');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -136,43 +137,57 @@ async function logoutSession() {
  * Dispatches a sequence of messages (Text/Media) with randomized delays.
  * @param {string} number - Destination phone number.
  * @param {Array} items - List of items { type, text, buffer, filename }.
+ * @param {number} logId - SQLite log ID for status tracking.
  */
-async function sendBatch(number, items) {
+async function sendBatch(number, items, logId) {
     if (!isConnected) throw new Error('WhatsApp not connected');
 
     const jid = `${number.replace(/\D/g, '')}@s.whatsapp.net`;
+    const db = await getDatabase();
 
-    for (const item of items) {
-        let messagePayload = {};
-        
-        switch (item.type) {
-            case 'text':
-                messagePayload = { text: item.text };
-                break;
-            case 'image':
-                messagePayload = { 
-                    image: item.buffer, 
-                    caption: item.text 
-                };
-                break;
-            case 'document':
-                messagePayload = { 
-                    document: item.buffer, 
-                    mimetype: 'application/octet-stream', 
-                    fileName: item.filename || 'document',
-                    caption: item.text 
-                };
-                break;
-            default:
-                logger.warn(`Unsupported message type skipped: ${item.type}`);
-                continue;
+    try {
+        for (const item of items) {
+            let messagePayload = {};
+            
+            switch (item.type) {
+                case 'text':
+                    messagePayload = { text: item.text };
+                    break;
+                case 'image':
+                    messagePayload = { 
+                        image: item.buffer, 
+                        caption: item.text 
+                    };
+                    break;
+                case 'document':
+                    messagePayload = { 
+                        document: item.buffer, 
+                        mimetype: 'application/octet-stream', 
+                        fileName: item.filename || 'document',
+                        caption: item.text 
+                    };
+                    break;
+                default:
+                    logger.warn(`Unsupported message type skipped: ${item.type}`);
+                    continue;
+            }
+
+            await sock.sendMessage(jid, messagePayload);
+            
+            // Intelligent delay to prevent rate-limiting: 800ms - 1500ms
+            const delay = Math.floor(Math.random() * 700) + 800;
+            await new Promise(resolve => setTimeout(resolve, delay));
         }
 
-        await sock.sendMessage(jid, messagePayload);
-        
-        // Intelligent delay to prevent rate-limiting: 800ms - 1500ms
-        const delay = Math.floor(Math.random() * 700) + 800;
-        await new Promise(resolve => setTimeout(resolve, delay));
+        // Mark as successfully sent
+        if (logId) {
+            db.run(`UPDATE audit_logs SET status = ? WHERE id = ?`, ['Sent', logId]);
+        }
+    } catch (err) {
+        logger.error(`Batch Dispatch Failed for ${number}:`, err);
+        if (logId) {
+            db.run(`UPDATE audit_logs SET status = ?, error = ? WHERE id = ?`, ['Failed', err.message, logId]);
+        }
     }
 }
 

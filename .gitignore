@@ -13,6 +13,7 @@ npm-debug.log*
 
 # Internal Agent Data
 .agent/
+logs/*.db
 
 # Documentation Dist
 docs/.vitepress/dist

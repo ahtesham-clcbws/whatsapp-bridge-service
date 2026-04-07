@@ -18,6 +18,7 @@ const {
     getPairingCode, 
     logoutSession 
 } = require('./whatsapp');
+const { getRecentLogs, getDatabase } = require('./database');
 const pino = require('pino');
 const fs = require('fs');
 require('dotenv').config();
@@ -99,6 +100,19 @@ app.post('/session/logout', authMiddleware, async (req, res) => {
     }
 });
 
+/**
+ * Audit Log Retreival
+ * GET /logs
+ */
+app.get('/logs', authMiddleware, async (req, res) => {
+    try {
+        const logs = await getRecentLogs(50);
+        res.json(logs);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to access audit logs.' });
+    }
+});
+
 // --- Unified Messaging Endpoint ---
 
 /**
@@ -145,8 +159,20 @@ app.post('/send', upload.any(), authMiddleware, async (req, res) => {
             }
         }
         
-        // Process in background to prevent API timeout
-        sendBatch(number, batchItems).catch(err => logger.error('Async Batch Error:', err));
+        // Logging the dispatch attempt to SQLite (Current Week)
+        const db = await getDatabase();
+        db.run(
+            `INSERT INTO audit_logs (recipient, status, type, metadata) VALUES (?, ?, ?, ?)`, 
+            [number, 'Scheduled', typeArr.join(','), JSON.stringify({ count: batchItems.length })],
+            function(err) {
+                if (err) return logger.error('Audit Log Insertion Error:', err);
+                
+                // Process in background with log awareness
+                sendBatch(number, batchItems, this.lastID).catch(err => 
+                    logger.error('Async Batch Error:', err)
+                );
+            }
+        );
 
         res.json({ status: 'success', message: 'Batch dispatch scheduled successfully.', count: batchItems.length });
     } catch (err) {

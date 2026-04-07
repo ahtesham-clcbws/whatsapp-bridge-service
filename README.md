@@ -1,93 +1,59 @@
-# 🌉 WhatsApp Bridge Service
+# 🚀 WhatsApp Bridge Service
 
-A generic, headless, and modular WhatsApp-to-HTTP bridge service. Securely dispatch messages, images, and documents via a high-level multipart API.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Pages](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/)
+A generic, headless, and modular **WhatsApp-to-HTTP Bridge** designed for reliable automated messaging. Built with Node.js and the Baileys library, this service provides a high-level API to dispatch text and media messages with enterprise-grade stability.
 
 ---
 
-## 🚀 Overview
+## ✨ Key Features
 
-The **WhatsApp Bridge Service** is a lightweight Node.js application that provides a secure HTTP interface to a linked WhatsApp account. It is designed to be platform-agnostic, allowing any backend (Laravel, Django, Node, Go) to send rich WhatsApp notifications without dealing with raw WebSocket protocols or browser automation.
-
-### ✨ Key Features
-- **Headless Linking**: Link your device remotely via **QR Code** or **8-digit Pairing Code** via API.
-- **Unified Batch Dispatcher**: Single endpoint to send sequences of text, images, and documents.
-- **Multipart API**: Directly upload files (up to 50MB+) from your production server to the bridge.
-- **Zero-Disk Footprint**: In-memory file processing for maximum privacy and performance.
-- **Rich Text Support**: Full support for WhatsApp Markdown (`*bold*`, `_italic_`, etc.) and multi-line breaks (`\n`).
+- **Multi-Tech Support**: Ready-to-use examples for PHP, Laravel, React, Next.js, Python, Go, Java, and more.
+- **Multipart Media API**: Single endpoint for sending text, images, and documents.
+- **SQLite Audit Logs**: Weekly-rotated database archives for long-term audit trails without performance hits.
+- **Session Management**: Supports both QR Code and 8-digit Pairing Code for remote linking.
+- **Anti-Ban Protection**: Built-in randomized delays and human-like dispatch sequencing.
+- **Zero Disk Latency**: In-memory media processing for high-speed delivery.
 
 ---
 
-## 📦 Quick Start
+## 🛠️ Performance & Stability
 
-### 1. Installation
-```bash
-git clone https://github.com/ahtesham-clcbws/whatsapp-bridge-service.git
-cd whatsapp-bridge-service
-npm install
-```
-
-### 2. Configuration
-Create a `.env` file in the root directory:
-```env
-PORT=3001
-API_KEY=your_secret_api_key
-MAX_FILE_SIZE=52428800
-WHATSAPP_AUTH_DIR=./auth
-```
-
-### 3. Run the Service
-```bash
-npm start
-```
+This service implements a **Weekly SQLite Rotation** strategy. 
+- **Main Audit Log**: All dispatches are recorded in `logs/audit_YYYY-WXX.db`.
+- **Automatic Archive**: At the start of each week, a new database file is created, keeping your active logs lightweight and your queries lightning fast.
 
 ---
 
-## 🔐 Authentication
-All API requests require a valid `apiKey` to be passed in the multipart form or headers.
+## ☁️ Deployment Guide
 
----
+Looking to host your bridge 24/7? Check out our supported platforms:
 
-## 📨 Message Dispatch (Unified Array Schema)
-
-The `/send` endpoint is highly flexible. For maximum consistency, use the **Array Schema** for both single and batch requests.
-
-### **Laravel (PHP) Example**
-```php
-Http::asMultipart()->post('http://localhost:3001/send', [
-    'number'  => '923123456789',
-    'apiKey'  => 'your_secret_api_key',
-    'type[]'  => 'image',
-    'text[]'  => "Hello! Here is your *Special Report*.\n- Row 1\n- Row 2",
-    'file[0]' => $fileData,
-]);
-```
-
----
-
-## 📲 Remote Session Management
-
-| Endpoint | Method | Description |
+| Platform | Type | Recommended For |
 | :--- | :--- | :--- |
-| `/session/status` | GET | Returns simple `{connected: true/false}` |
-| `/session/qr` | GET | Returns the latest QR string for remote display. |
-| `/session/pairing-code` | POST | Takes a `number` and returns an 8-digit code for linking. |
-| `/session/logout` | POST | Permanently disconnects and clears local session data. |
+| **Oracle Cloud** | Always Free | Professional 24/7 Hosting ($0/mo) |
+| **Hostinger VPS** | Low Cost | KVM VPS with unmatched Node.js stability |
+| **Railway.app** | Managed | Easiest setup with one-click GitHub deployment |
+| **Render.com** | Managed | Great for rapid prototyping |
+
+> [!TIP]
+> Check our detailed [Deployment Guide](./docs/deployment.md) for step-by-step setup and affiliate sign-up links.
 
 ---
 
-## 📖 Detailed Documentation
-For full API references, remote management, and **[24/7 Deployment Guides (PM2, Cloudflare, Railway)](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/deployment)**, please visit our documentation site.
+## 🗺️ Roadmap (Future Features)
+
+- [ ] **Webhook Callbacks**: Forward incoming messages and delivery receipts to your backend.
+- [ ] **Group Messaging**: High-level support for WhatsApp Group JIDs.
+- [ ] **Message Retry Queue**: Automatic retries for failed dispatches during socket drops.
+- [ ] **Multi-Account Instances**: Run multiple WhatsApp sessions from a single bridge.
+- [ ] **Template Engine**: Native variable replacement for personalized bulk messaging.
 
 ---
 
-## 🛡️ Privacy & Security
-- **No Third-Party Cloud**: All data flows directly between your server and the bridge.
-- **End-to-End Encryption**: Utilizes the official WhatsApp Web protocol for secure transmission.
+## 📜 License
+
+Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ---
 
-## ⚖️ License
-This project is licensed under the **MIT License**. Check the `LICENSE` file for details.
+### 👨‍💻 Developed by [Ahtesham](https://github.com/ahtesham-clcbws)
+*Building modular tools for the modern developer.*

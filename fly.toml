@@ -1,0 +1,36 @@
+# fly.toml app configuration file generated for whatsapp-bridge-service
+#
+# See https://fly.io/docs/reference/configuration/ for information
+
+app = "whatsapp-bridge-service"
+primary_region = "ams"
+
+[build]
+  # Auto-detects Node.js project
+  builder = "heroku/buildpacks:20"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[mounts]
+  # Persistent storage for session (auth/) and audit logs (logs/)
+  # MUST create these volumes manually before first deploy:
+  # fly volumes create wa_data --size 1
+  source = "wa_data"
+  destination = "/app/data"
+
+[env]
+  # Example: PORT=3001
+  # Session and logs are redirected to the persistent volume path
+  WHATSAPP_AUTH_DIR = "/app/data/auth"
+  # LOGS_DIR = "/app/data/logs"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
