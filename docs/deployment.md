@@ -47,7 +47,7 @@ ssh -i your_oracle_key.key ubuntu@YOUR_INSTANCE_IP
 
 Hostinger's KVM VPS is highly optimized for Node.js performance.
 
-1.  **Sign Up**: [Sign Up via Hostinger Affiliate Link]([YOUR_HOSTINGER_AFFILIATE_LINK])
+1.  **Sign Up**: [Sign Up via Hostinger](https://www.hostinger.com/in?REFERRALCODE=1JFAHTESHWCM)
 2.  **Plan**: Select "KVM VPS 1" or higher.
 3.  **Setup**: Choose **Ubuntu 22.04** during the initial setup wizard.
 4.  **Login**: Hostinger will provide you with a Root Password. SSH in using:
