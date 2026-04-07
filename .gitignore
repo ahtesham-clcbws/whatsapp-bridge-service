@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+.npm
+package-lock.json
+
+# Environment/Security
+.env
+auth/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Documentation Dist
+docs/.vitepress/dist
+docs/.vitepress/cache
+node_modules/
+
+# OS Specific
+.DS_Store
+Thumbs.db
