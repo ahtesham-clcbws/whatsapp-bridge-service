@@ -11,6 +11,9 @@ auth/
 *.log
 npm-debug.log*
 
+# Internal Agent Data
+.agent/
+
 # Documentation Dist
 docs/.vitepress/dist
 docs/.vitepress/cache
