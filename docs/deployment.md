@@ -187,19 +187,26 @@ sudo certbot --nginx -d bridge.yourdomain.com
 
 ---
 
-## 🛠️ 6. Troubleshooting (FAQ)
+---
 
-### ❓ "QR Code is not showing in terminal"
-- Ensure you are running `npm start` or `pm2 logs wa-bridge`.
-- If the logs are frozen, check if your internet connection is stable.
+## 🏰 7. Self-Hosting: MacBook Air (Legacy macOS)
 
-### ❓ "Connection Refused (Port 3001)"
-- **Oracle Cloud**: Ensure you added the Ingress Rule (Step 1 > Step 2).
-- **Ubuntu Firewall**: Try running `sudo ufw allow 3001`.
+If you are using an older Mac (Big Sur 11.7) as your 24/7 server, use **Localtunnel** to bypass modern library crashes.
 
-### ❓ "WhatsApp keeps disconnecting"
-- Ensure you are NOT using Vercel (Sleep/Serverless timeouts).
-- Check your phone's battery optimization settings for WhatsApp if using a physical phone.
+### Step 1: Install & Start
+```bash
+npm install -g localtunnel
+pm2 start "lt --port 3001 --subdomain your-name" --name wa-tunnel --max-restarts 10
+```
+
+### Step 2: Protocol Bypass (Laravel/API)
+Localtunnel requires a header to skip its intervention page. Add this to your API requests:
+
+```php
+'headers' => [
+    'bypass-tunnel-reminder' => 'true'
+]
+```
 
 ---
 

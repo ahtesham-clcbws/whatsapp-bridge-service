@@ -8,6 +8,12 @@
 const { connectToWhatsApp } = require('./whatsapp');
 const { startServer } = require('./server');
 const pino = require('pino');
+const crypto = require('crypto');
+
+// Polyfill for older Node.js versions lacking globalThis.crypto
+if (!global.crypto && crypto.webcrypto) {
+    global.crypto = crypto.webcrypto;
+}
 
 const logger = pino({ level: 'info' });
 
