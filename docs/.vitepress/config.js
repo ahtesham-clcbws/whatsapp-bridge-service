@@ -8,6 +8,7 @@ export default {
       { text: "The Vision", link: "/vision" },
       { text: "API Reference", link: "/api" },
       { text: "Session", link: "/session" },
+      { text: "History", link: "/changelogs/v2.4.0" },
       { text: "Deployment", link: "/deployment" },
       { text: "Acknowledgements", link: "/acknowledgments" }
     ],
@@ -18,9 +19,21 @@ export default {
           { text: "Getting Started", link: "/" },
           { text: "The Vision", link: "/vision" },
           { text: "API Guide", link: "/api" },
+          { text: "API Client Testing", link: "/api-testing" },
           { text: "Remote Session", link: "/session" },
           { text: "24/7 Deployment", link: "/deployment" },
           { text: "Acknowledgements", link: "/acknowledgments" }
+        ]
+      },
+      {
+        text: "Project History",
+        items: [
+          { text: "v2.4.0 (Latest)", link: "/changelogs/v2.4.0" },
+          { text: "v2.3.0", link: "/changelogs/v2.3.0" },
+          { text: "v2.2.0", link: "/changelogs/v2.2.0" },
+          { text: "v2.1.0", link: "/changelogs/v2.1.0" },
+          { text: "v2.0.0", link: "/changelogs/v2.0.0" },
+          { text: "v1.x Series", link: "/changelogs/v1.3.0" }
         ]
       }
     ],

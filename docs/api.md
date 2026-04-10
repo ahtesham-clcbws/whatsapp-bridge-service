@@ -23,6 +23,49 @@ The preferred method is using **Multipart/Form-Data** to handle both text and me
 
 ---
 
+---
+
+## 📡 Webhook Engine (v2.2.0)
+
+The bridge can notify your external backend service in real-time when events occur. Configure your `WEBHOOK_URL` in the `.env` file to enable this.
+
+### Event Types
+
+| Event | Trigger |
+| :--- | :--- |
+| `message.status` | Triggered when a message status changes (Delivered, Read). |
+| `message.upsert` | Triggered when a new incoming message is received. |
+
+### Status Payload Example
+```json
+{
+  "event": "message.status",
+  "whatsapp_id": "3EB0BC...",
+  "status": "Delivered",
+  "recipient": "910000000000",
+  "timestamp": "2026-04-10T12:00:00Z"
+}
+```
+
+---
+
+## 🛡️ Resilience & Retries (v2.3.0)
+
+The bridge features a built-in **Exponential Backoff** engine designed to recover from temporary network instability. 
+
+### Retry Policy
+- **Attempt 1**: Immediate failure.
+- **Attempt 2**: Retries after **5 seconds**.
+- **Attempt 3**: Retries after **15 seconds**.
+- **Attempt 4**: Final retry after **60 seconds**.
+
+### Audit Tracking
+Every message in the `/logs` result now includes a `retry_count`.
+- `retry_count: 0` -> Sent on the first attempt.
+- `retry_count: 3` -> Succeeded after reaching the final retry tier.
+
+---
+
 ## 🩺 System Health
 
 ### `GET /health`

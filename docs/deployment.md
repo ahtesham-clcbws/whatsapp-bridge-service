@@ -112,9 +112,12 @@ DigitalOcean offers both a simple "App Platform" and traditional "Droplets" (VPS
 
 Once logged into your Ubuntu/Linux server, run these in order:
 
-### 1. Install Node.js (Version 20+)
+### 1. Install Node.js (Version 16+)
+The bridge is optimized for **Node.js 16, 18, and 20**. While Node 20 is recommended for modern VPS instances, we maintain compatibility with Node 16 for legacy hardware.
+
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+# Example for Node 18 (Highly stable for ARM/x64)
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 ```
 
@@ -188,6 +191,22 @@ sudo certbot --nginx -d bridge.yourdomain.com
 ---
 
 ---
+
+## 🍓 6. Raspberry Pi & ARM Boards (Mini-Computer)
+
+This bridge is specifically designed to be **Zero-Bloat**, making it ideal for 24/7 Raspberry Pi setups.
+
+### Performance Tuning for ARM
+- **Memory**: Ensure at least **512MB RAM** is free.
+- **Node Choice**: Use **Node 18** if possible; it has the best performance-to-security ratio on ARMv7/v8.
+- **SQLite Latency**: Use a high-quality (Class 10) SD card to avoid database write lag during session archiving.
+
+### 24/7 Reliability
+If your Pi is in a remote location, we recommend setting up a daily automated health check:
+```bash
+# Add to crontab to check every hour
+* * * * * curl -f http://localhost:3001/health || pm2 restart wa-bridge
+```
 
 ## 🏰 7. Self-Hosting: MacBook Air (Legacy macOS)
 

@@ -10,40 +10,38 @@ hero:
       text: Get Started
       link: /api
     - theme: alt
-      text: View on GitHub
-      link: https://github.com/ahtesham-clcbws/whatsapp-bridge-service
+      text: The Vision
+      link: /vision
 
 features:
-  - icon: 🚀
-    title: Headless Linking
-    details: Remote QR and 8-digit Pairing Codes for effortless device linking.
-  - icon: 📦
-    title: Multipart API
-    details: High-performance file handling with zero-disk footprint.
   - icon: 🛡️
-    title: Secure by Design
-    details: API-KEY protected, stateless architecture for absolute privacy.
+    title: Native MFA Security
+    details: Hardware-locked security using WhatsApp OTPs for dashboard access.
+  - icon: 📡
+    title: Real-time Webhooks
+    details: Automated delivery tracking (Sent, Delivered, Read) and incoming message hooks.
+  - icon: 🔄
+    title: Resilience Engine
+    details: Automated Exponential Backoff Retry for temporary connection failures.
 ---
 
-## 🚀 Project Progress (v1.3.0)
+## 🚀 The v2.x Era (Current)
 
-### Current Features
-- [x] **Multipart Media API**: High-performance text/image/document dispatch.
-- [x] **Weekly SQLite Audit Logs**: Automated archiving and high-efficiency performance.
-- [x] **API-based Log Access**: Remote history retrieval via `/logs`.
-- [x] **Flexible Session Management**: QR Code and 8-digit Pairing Code support.
-- [x] **Universal SDK Support**: 11+ language examples (PHP, Laravel, React, Next.js, Go).
+### Core Accomplishments
+- [x] **v2.1.0: Heartbeat System** - Real-time stats and health monitoring via `/health`.
+- [x] **v2.2.0: Webhook Engine** - Real-time delivery receipts and incoming message callbacks.
+- [x] **v2.3.0: Resilience Engine** - Automated recovery for temporary socket failures.
+- [x] **v2.4.0: Pre-Flight Testing** - Automated validation suite for API integrity.
 
-### Future Roadmap
-- [ ] **Web Dashboard**: An integrated UI for log viewing and session control.
-- [ ] **Webhook Callbacks**: Forwarding incoming messages to your own server.
-- [ ] **Group Management**: Dedicated high-level API for WhatsApp Groups.
-- [ ] **Retry Engine**: Automatic in-memory/SQLite retries for unstable connections.
-- [ ] **Multi-Session Support**: Manage multiple WhatsApp accounts in one instance.
+### Active Roadmap (v3.0)
+- [ ] **Phase 3: Admin Dashboard** - Lightweight UI for session management and log browsing.
+- [ ] **WhatsApp Native MFA** - Password-less security using dynamic codes sent to your phone.
+- [ ] **Template Engine** - Support for variable replacement (e.g., `Hello {{user}}`).
 
-## 🛠️ Quick Installation
+## 🧭 Project Vision
+We believe in **Headless-First**, **Hardware-Agnostic**, and **Zero-Bloat** development. Read more in **[The Vision](/vision)**.
 
-```bash
-npm install
-npm start
-```
+---
+
+### 👨‍💻 Developed by [Ahtesham](https://github.com/ahtesham-clcbws)
+*(Built in collaboration with Antigravity AI)*
