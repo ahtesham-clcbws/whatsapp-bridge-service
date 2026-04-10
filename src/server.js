@@ -16,11 +16,11 @@ const {
     isWhatsAppConnected, 
     getLatestQR, 
     getPairingCode, 
-    logoutSession 
+    logoutSession,
+    getAllGroups
 } = require('./whatsapp');
 const { getRecentLogs, getDatabase } = require('./database');
 const pino = require('pino');
-const fs = require('fs');
 require('dotenv').config();
 
 const logger = pino({ level: 'info' });
@@ -34,14 +34,23 @@ const upload = multer({
     limits: { fileSize: process.env.MAX_FILE_SIZE || 50 * 1024 * 1024 }
 });
 
-app.use(express.json());
+// Middleware: Global body parsing (Forces JSON parsing even if headers are missing)
+app.use(express.json({ type: () => true }));
 
 /**
  * Security Middleware: Validates the request against the static API_KEY.
- * Use Authorization header or apiKey field in request body.
  */
 const authMiddleware = (req, res, next) => {
-    const providedKey = req.body.apiKey || req.query.apiKey || req.headers['x-api-key'];
+    const providedKey = req.body?.apiKey || req.query.apiKey || req.headers['x-api-key'];
+    
+    // Debug Trace to catch why requests fail in middleware
+    logger.info({ 
+        method: req.method, 
+        path: req.path, 
+        hasBody: !!req.body, 
+        hasHeaderKey: !!req.headers['x-api-key'] 
+    }, 'Security Trace');
+
     if (!providedKey || providedKey !== apiKey) {
         return res.status(401).json({ error: 'Unauthorized: Invalid API Key provided.' });
     }
@@ -87,6 +96,20 @@ app.post('/session/pairing-code', authMiddleware, async (req, res) => {
 });
 
 /**
+ * Retrieve all Groups (ID + Name)
+ * GET /session/groups
+ */
+app.get('/session/groups', authMiddleware, async (req, res) => {
+    try {
+        const groups = await getAllGroups();
+        res.json(groups);
+    } catch (err) {
+        logger.error('Group Fetch Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
  * Session Disconnect / Clear State
  * POST /session/logout
  */
@@ -117,25 +140,35 @@ app.get('/logs', authMiddleware, async (req, res) => {
 
 /**
  * Dispatch Hub
- * POST /send (Multipart/Form-Data)
+ * POST /send (Multipart/Form-Data or JSON)
  */
-app.post('/send', upload.any(), authMiddleware, async (req, res) => {
+app.post('/send', authMiddleware, (req, res, next) => {
+    // Only trigger multer if the request is multipart/form-data
+    if (req.headers['content-type']?.includes('multipart')) {
+        return upload.any()(req, res, next);
+    }
+    next();
+}, async (req, res) => {
     try {
+        logger.info({ body: req.body, headers: req.headers }, 'Incoming dispatch request');
+
         if (!isWhatsAppConnected()) {
             return res.status(503).json({ error: 'Service unavailable. WhatsApp not linked.' });
         }
 
-        // Handle both singular strings and arrays for maximum client flexibility
-        const { number, type: types, text: texts } = req.body;
+        // Support both JSON body and Multipart form fields
+        const number = req.body.number || req.query.number;
+        const types = req.body.type || req.query.type;
+        const texts = req.body.text || req.query.text;
         const files = req.files || [];
+
+        if (!number) return res.status(400).json({ error: 'Recipient identifier (number or @g.us JID) is mandatory.' });
 
         // Parsing logic to handle literal \n sequences often sent via HTTP clients
         const typeArr = Array.isArray(types) ? types : [types];
         const textArr = (Array.isArray(texts) ? texts : [texts]).map(t => 
             typeof t === 'string' ? t.replace(/\\n/g, '\n') : t
         );
-        
-        if (!number) return res.status(400).json({ error: 'Recipient number is mandatory.' });
 
         const batchItems = [];
         let fileIndex = 0;
@@ -174,11 +207,22 @@ app.post('/send', upload.any(), authMiddleware, async (req, res) => {
             }
         );
 
-        res.json({ status: 'success', message: 'Batch dispatch scheduled successfully.', count: batchItems.length });
+        res.json({ status: 'success', message: 'Batch dispatch scheduled successfully.', recipient: number });
     } catch (err) {
         logger.error('API Server Error:', err);
         res.status(500).json({ error: 'Internal Bridge Failure.' });
     }
+});
+
+/**
+ * Global Error Handler: Catches JSON parsing errors and middleware failures.
+ */
+app.use((err, req, res, next) => {
+    logger.error({ err: err.message, stack: err.stack }, 'Global Request Error');
+    res.status(err.status || 500).json({ 
+        error: 'Middleware/Parser Error', 
+        message: err.message 
+    });
 });
 
 /**

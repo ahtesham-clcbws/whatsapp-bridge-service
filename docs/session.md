@@ -16,7 +16,7 @@ To link your WhatsApp account without terminal access, use the following flow:
 
 ### 3. Pairing via 8-Digit Code (Pairing Code)
 `POST /session/pairing-code`
-- **Body**: `{"number": "923123456789"}`
+- **Body**: `{"number": "910000000000"}`
 - Enter the returned 8-digit code on your phone in **Linked Devices > Link with Phone Number**.
 
 ---

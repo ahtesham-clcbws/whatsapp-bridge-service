@@ -16,10 +16,29 @@ The preferred method is using **Multipart/Form-Data** to handle both text and me
 
 | Parameter | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `number` | String | Yes | Destination with country code (e.g., `923123456789`). |
+| `number` | String | Yes | Destination with country code (e.g., `910000000000`) or Group JID (`120363... @g.us`). |
 | `type[]` | Array | Yes | Message types (`text`, `image`, `document`). |
 | `text[]` | Array | No | Corresponding captions or message bodies. |
 | `file[]` | File | If media | Binary attachments for `image` or `document`. |
+
+---
+
+## 👥 Group Management
+
+### `GET /session/groups`
+
+Returns a list of all participating groups. Use this to discover the `id` (JID) for your group dispatches.
+
+**Response:**
+```json
+[
+  {
+    "id": "120363000000000000@g.us",
+    "subject": "Staff Announcements",
+    "participants": 24
+  }
+]
+```
 
 ---
 
@@ -32,15 +51,15 @@ Choose your environment to see how to integrate the Bridge Service.
 ```bash [cURL]
 # Simple text dispatch
 curl -X POST http://localhost:3001/send \
-  -F "apiKey=your_secret_key" \
-  -F "number=923123456789" \
+  -H "x-api-key: your_api_key" \
+  -F "number=910000000000" \
   -F "type[]=text" \
   -F "text[]=*Bridge Alert*\nSuccessfully sent via cURL."
 
 # Media dispatch with caption
 curl -X POST http://localhost:3001/send \
-  -F "apiKey=your_secret_key" \
-  -F "number=923123456789" \
+  -H "x-api-key: your_api_key" \
+  -F "number=910000000000" \
   -F "type[]=image" \
   -F "file[]=@/path/to/image.jpg" \
   -F "text[]=Check out this image!"
@@ -48,12 +67,12 @@ curl -X POST http://localhost:3001/send \
 
 ```php [PHP (Vanilla)]
 <?php
-$apiKey = 'your_secret_key';
+$apiKey = 'your_api_key';
 $baseUrl = 'http://localhost:3001';
 
 $data = [
     'apiKey' => $apiKey,
-    'number' => '923123456789',
+    'number' => '910000000000',
     'type' => ['text'],
     'text' => ["*Bridge Alert*\nSent via PHP cURL."]
 ];
@@ -76,7 +95,7 @@ use Illuminate\Support\Facades\Http;
 $response = Http::asMultipart()
     ->post('http://localhost:3001/send', [
         'apiKey' => config('services.whatsapp.key'),
-        'number' => '923123456789',
+        'number' => '910000000000',
         'type'   => ['text', 'image'],
         'text'   => ["*Hello from Laravel*", "Image Caption"],
         'file'   => [
@@ -93,8 +112,8 @@ import requests
 
 url = "http://localhost:3001/send"
 payload = {
-    "apiKey": "your_secret_key",
-    "number": "923123456789",
+    "apiKey": "your_api_key",
+    "number": "910000000000",
     "type[]": ["text"],
     "text[]": ["*Bridge Alert*\nSent via Python Requests."]
 }
@@ -112,8 +131,8 @@ const fs = require('fs');
 
 async function sendWhatsApp() {
   const form = new FormData();
-  form.append('apiKey', 'your_secret_key');
-  form.append('number', '923123456789');
+  form.append('apiKey', 'your_api_key');
+  form.append('number', '910000000000');
   form.append('type[]', 'text');
   form.append('text[]', '*Bridge Alert*\nSent via Axios.');
 
@@ -131,8 +150,8 @@ async function sendWhatsApp() {
 ```javascript [Fetch (React/Modern JS)]
 const sendWhatsApp = async () => {
   const formData = new FormData();
-  formData.append('apiKey', 'your_secret_key');
-  formData.append('number', '923123456789');
+  formData.append('apiKey', 'your_api_key');
+  formData.append('number', '910000000000');
   formData.append('type[]', 'text');
   formData.append('text[]', '*Bridge Alert*\nSent via Fetch.');
 
@@ -176,8 +195,8 @@ func main() {
     body := &bytes.Buffer{}
     writer := multipart.NewWriter(body)
     
-    writer.WriteField("apiKey", "your_secret_key")
-    writer.WriteField("number", "923123456789")
+    writer.WriteField("apiKey", "your_api_key")
+    writer.WriteField("number", "910000000000")
     writer.WriteField("type[]", "text")
     writer.WriteField("text[]", "*Bridge Alert*\nSent via Go lang.")
     
@@ -197,8 +216,8 @@ OkHttpClient client = new OkHttpClient();
 
 RequestBody requestBody = new MultipartBody.Builder()
     .setType(MultipartBody.FORM)
-    .addFormDataPart("apiKey", "your_secret_key")
-    .addFormDataPart("number", "923123456789")
+    .addFormDataPart("apiKey", "your_api_key")
+    .addFormDataPart("number", "910000000000")
     .addFormDataPart("type[]", "text")
     .addFormDataPart("text[]", "*Bridge Alert*\nSent via OkHttp.")
     .build();
@@ -215,8 +234,8 @@ Response response = client.newCall(request).execute();
 var client = new HttpClient();
 var requestContent = new MultipartFormDataContent();
 
-requestContent.Add(new StringContent("your_secret_key"), "apiKey");
-requestContent.Add(new StringContent("923123456789"), "number");
+requestContent.Add(new StringContent("your_api_key"), "apiKey");
+requestContent.Add(new StringContent("910000000000"), "number");
 requestContent.Add(new StringContent("text"), "type[]");
 requestContent.Add(new StringContent("*Bridge Alert*\nSent via .NET."), "text[]");
 
@@ -234,8 +253,8 @@ conn = Faraday.new(url: 'http://localhost:3001') do |f|
 end
 
 payload = {
-  apiKey: 'your_secret_key',
-  number: '923123456789',
+  apiKey: 'your_api_key',
+  number: '910000000000',
   'type[]': 'text',
   'text[]': '*Bridge Alert*\nSent via Ruby Faraday.'
 }

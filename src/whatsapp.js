@@ -1,11 +1,7 @@
 /**
- * WhatsApp Bridge Service - Core Handler
- * --------------------------------------
- * This module manages the connection to WhatsApp Web via the Baileys library.
- * It handles authentication, reconnection logic, and batch message dispatching.
- * 
- * @author Ahtesham
- * @license MIT
+ * WhatsApp Bridge Service - Core Handler [v2.0]
+ * --------------------------------------------
+ * Manages Baileys socket lifecycle, authentication, and multi-recipient dispatch.
  */
 
 const { 
@@ -23,7 +19,15 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-// Initialize pino-logger for efficient logging
+/**
+ * @typedef {Object} BatchItem
+ * @property {'text'|'image'|'document'} type - Content category.
+ * @property {string} [text] - Caption or message body.
+ * @property {Buffer} [buffer] - Binary data for media.
+ * @property {string} [filename] - Original name for documents.
+ */
+
+// Initialize logger
 const logger = pino({ level: 'info' });
 const authDir = process.env.WHATSAPP_AUTH_DIR || './auth';
 
@@ -33,11 +37,10 @@ let latestQR = null;
 
 /**
  * Initializes the connection to WhatsApp.
- * Handles the multi-file authentication state and creates the socket.
  */
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
-    const { version, isLatest } = await fetchLatestBaileysVersion();
+    const { version } = await fetchLatestBaileysVersion();
     
     logger.info(`Starting WhatsApp Bridge with Baileys v${version.join('.')}`);
 
@@ -47,7 +50,7 @@ async function connectToWhatsApp() {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, logger),
         },
-        printQRInTerminal: false, // QR is handled manually for potential remote access
+        printQRInTerminal: false,
         logger,
         browser: ['WhatsApp Bridge Service', 'Chrome', '1.1.0'],
         connectTimeoutMs: 60000,
@@ -56,11 +59,9 @@ async function connectToWhatsApp() {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Monitor connection lifecycle events
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
-        // Capture QR code for terminal or remote display
         if (qr) {
             latestQR = qr;
             console.log('\n--- SCAN THIS QR CODE WITH YOUR WHATSAPP ---\n');
@@ -74,9 +75,7 @@ async function connectToWhatsApp() {
             const statusCode = (lastDisconnect.error instanceof Boom) ? 
                 lastDisconnect.error.output?.statusCode : 0;
             
-            // Reconnect unless the user explicitly logged out
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-            
             logger.error(`Connection closed (${statusCode}). Reconnecting: ${shouldReconnect}`);
             
             if (shouldReconnect) {
@@ -87,10 +86,9 @@ async function connectToWhatsApp() {
             latestQR = null;
             logger.info('WhatsApp connection established successfully!');
             
-            // Send connection confirmation to self (internal verification)
             const selfJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
             await sock.sendMessage(selfJid, { 
-                text: '✅ *WhatsApp Bridge Service Connected Successfully!*\n\nThe headless dispatcher is now active and awaiting HTTP requests.' 
+                text: '✅ *WhatsApp Bridge Service Connected!*\n\nGroup support and enhanced error handling are now active.' 
             });
         }
     });
@@ -99,50 +97,53 @@ async function connectToWhatsApp() {
 }
 
 /**
- * Generates an 8-digit pairing code for a phone number (Alternate login).
- * @param {string} phoneNumber - Destination number in E.164 format.
- * @returns {string} 8-character pairing code.
+ * Retrieves a list of all participating groups.
+ * @returns {Promise<Array<{id: string, subject: string, participants: number}>>}
+ */
+async function getAllGroups() {
+    if (!isConnected) throw new Error('WhatsApp not connected');
+    const groups = await sock.groupFetchAllParticipating();
+    return Object.values(groups).map(g => ({
+        id: g.id,
+        subject: g.subject,
+        participants: g.participants.length
+    }));
+}
+
+/**
+ * Generates pairing code for remote login.
+ * @param {string} phoneNumber 
  */
 async function getPairingCode(phoneNumber) {
     if (isConnected) throw new Error('Already connected');
     if (!sock) throw new Error('Socket not initialized');
-    
-    logger.info(`Requesting pairing code for ${phoneNumber}`);
-    // Strip non-numeric characters
-    const code = await sock.requestPairingCode(phoneNumber.replace(/\D/g, ''));
-    return code;
+    return await sock.requestPairingCode(phoneNumber.replace(/\D/g, ''));
 }
 
 /**
- * Log out from the current WhatsApp session and clear all local credentials.
+ * Clears session and logs out.
  */
 async function logoutSession() {
     if (sock) {
         await sock.logout();
         isConnected = false;
         latestQR = null;
-        
-        // Wipe the authentication directory for security
-        if (fs.existsSync(authDir)) {
-            fs.rmSync(authDir, { recursive: true, force: true });
-        }
-        
-        logger.info('Logged out. Session data deleted.');
-        // Re-initialize to allow new pairing flow
+        if (fs.existsSync(authDir)) fs.rmSync(authDir, { recursive: true, force: true });
         setTimeout(connectToWhatsApp, 2000);
     }
 }
 
 /**
- * Dispatches a sequence of messages (Text/Media) with randomized delays.
- * @param {string} number - Destination phone number.
- * @param {Array} items - List of items { type, text, buffer, filename }.
- * @param {number} logId - SQLite log ID for status tracking.
+ * Dispatches a sequence of messages to a JID (Individual or Group).
+ * @param {string} recipient - Phone number or Group JID (@g.us).
+ * @param {BatchItem[]} items - Payload sequence.
+ * @param {number} logId - Audit log reference.
  */
-async function sendBatch(number, items, logId) {
+async function sendBatch(recipient, items, logId) {
     if (!isConnected) throw new Error('WhatsApp not connected');
 
-    const jid = `${number.replace(/\D/g, '')}@s.whatsapp.net`;
+    // Smart JID resolution: Support both numbers and group JIDs
+    const jid = recipient.includes('@') ? recipient : `${recipient.replace(/\D/g, '')}@s.whatsapp.net`;
     const db = await getDatabase();
 
     try {
@@ -154,10 +155,7 @@ async function sendBatch(number, items, logId) {
                     messagePayload = { text: item.text };
                     break;
                 case 'image':
-                    messagePayload = { 
-                        image: item.buffer, 
-                        caption: item.text 
-                    };
+                    messagePayload = { image: item.buffer, caption: item.text };
                     break;
                 case 'document':
                     messagePayload = { 
@@ -167,35 +165,28 @@ async function sendBatch(number, items, logId) {
                         caption: item.text 
                     };
                     break;
-                default:
-                    logger.warn(`Unsupported message type skipped: ${item.type}`);
-                    continue;
+                default: continue;
             }
 
             await sock.sendMessage(jid, messagePayload);
-            
-            // Intelligent delay to prevent rate-limiting: 800ms - 1500ms
             const delay = Math.floor(Math.random() * 700) + 800;
             await new Promise(resolve => setTimeout(resolve, delay));
         }
 
-        // Mark as successfully sent
-        if (logId) {
-            db.run(`UPDATE audit_logs SET status = ? WHERE id = ?`, ['Sent', logId]);
-        }
+        if (logId) db.run(`UPDATE audit_logs SET status = ? WHERE id = ?`, ['Sent', logId]);
     } catch (err) {
-        logger.error(`Batch Dispatch Failed for ${number}:`, err);
-        if (logId) {
-            db.run(`UPDATE audit_logs SET status = ?, error = ? WHERE id = ?`, ['Failed', err.message, logId]);
-        }
+        logger.error(`Dispatch Failed for ${recipient}:`, err);
+        if (logId) db.run(`UPDATE audit_logs SET status = ?, error = ? WHERE id = ?`, ['Failed', err.message, logId]);
     }
 }
 
 module.exports = {
     connectToWhatsApp,
     sendBatch,
+    getAllGroups,
     getLatestQR: () => latestQR,
     getPairingCode,
     logoutSession,
     isWhatsAppConnected: () => isConnected
 };
+
