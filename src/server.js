@@ -44,12 +44,7 @@ const authMiddleware = (req, res, next) => {
     const providedKey = req.body?.apiKey || req.query.apiKey || req.headers['x-api-key'];
     
     // Debug Trace to catch why requests fail in middleware
-    logger.info({ 
-        method: req.method, 
-        path: req.path, 
-        hasBody: !!req.body, 
-        hasHeaderKey: !!req.headers['x-api-key'] 
-    }, 'Security Trace');
+    // logger.info({ method: req.method, path: req.path, hasBody: !!req.body, hasHeaderKey: !!req.headers['x-api-key'] }, 'Security Trace');
 
     if (!providedKey || providedKey !== apiKey) {
         return res.status(401).json({ error: 'Unauthorized: Invalid API Key provided.' });
@@ -136,6 +131,19 @@ app.get('/logs', authMiddleware, async (req, res) => {
     }
 });
 
+/**
+ * Service Heartbeat / Health Check
+ */
+app.get('/health', async (req, res) => {
+    res.json({
+        status: 'online',
+        whatsapp: isWhatsAppConnected() ? 'connected' : 'disconnected',
+        uptime: Math.floor(process.uptime()),
+        version: '2.1.0',
+        timestamp: new Date().toISOString()
+    });
+});
+
 // --- Unified Messaging Endpoint ---
 
 /**
@@ -150,7 +158,7 @@ app.post('/send', authMiddleware, (req, res, next) => {
     next();
 }, async (req, res) => {
     try {
-        logger.info({ body: req.body, headers: req.headers }, 'Incoming dispatch request');
+        // logger.info({ body: req.body, headers: req.headers }, 'Incoming dispatch request');
 
         if (!isWhatsAppConnected()) {
             return res.status(503).json({ error: 'Service unavailable. WhatsApp not linked.' });

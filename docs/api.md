@@ -23,6 +23,25 @@ The preferred method is using **Multipart/Form-Data** to handle both text and me
 
 ---
 
+## 🩺 System Health
+
+### `GET /health`
+
+Returns the current vitals of the bridge service. (Does not require API_KEY for monitoring compatibility).
+
+**Response:**
+```json
+{
+  "status": "online",
+  "whatsapp": "connected",
+  "uptime": 12450,
+  "version": "2.1.0",
+  "timestamp": "2026-04-10T10:00:00.000Z"
+}
+```
+
+---
+
 ## 👥 Group Management
 
 ### `GET /session/groups`
