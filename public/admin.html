@@ -6,6 +6,7 @@
     <title>WhatsApp Bridge | Admin Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0d0d0d; color: white; }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
@@ -77,9 +78,8 @@
                         <button onclick="fetchQR()" class="wa-bg px-8 py-3 rounded-xl text-black font-bold btn-action">Generate QR</button>
                         <button onclick="promptPairing()" class="glass px-8 py-3 rounded-xl font-bold hover:bg-white/10 btn-action">Pairing Code</button>
                     </div>
-                    <div id="qrContainer" class="hidden mx-auto p-4 bg-white rounded-2xl w-max">
-                         <!-- QR Will render here as text/monospaced -->
-                         <pre id="qrRaw" class="text-[6px] leading-[4px] font-mono text-black"></pre>
+                    <div id="qrContainer" class="hidden mx-auto p-4 bg-white rounded-2xl w-max shadow-2xl">
+                         <div id="qrcode"></div>
                     </div>
                 </div>
 
@@ -112,6 +112,8 @@
     <script>
         const token = localStorage.getItem('adminToken');
         if (!token) window.location.href = '/dashboard/';
+
+        let qrInstance = null;
 
         async function api(path, method = 'GET', body = null) {
             const options = {
@@ -172,8 +174,17 @@
             const data = await api('/session/qr');
             if (data.qr) {
                 document.getElementById('qrContainer').classList.remove('hidden');
-                document.getElementById('qrRaw').innerText = "QR Found. Real-time rendering under development. Please check server logs for QR for now, or use Pairing Code.";
-                alert("QR String retrieved to buffer. UI Renderer for QR is scheduled for Sprint 3. Use Pairing Code for now.");
+                const container = document.getElementById('qrcode');
+                container.innerHTML = ''; // Clear previous
+                
+                qrInstance = new QRCode(container, {
+                    text: data.qr,
+                    width: 256,
+                    height: 256,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
             }
         }
 
