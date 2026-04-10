@@ -25,6 +25,12 @@ require('dotenv').config();
 
 const logger = pino({ level: 'info' });
 const app = express();
+const path = require('path');
+const crypto = require('crypto');
+
+// --- Global State for v3.0 Admin Dashboard ---
+const otpMap = new Map(); // Stores { code, expires, ip }
+const sessions = new Set(); // Stores verified session tokens
 const port = process.env.PORT || 3001;
 const apiKey = process.env.API_KEY;
 
@@ -37,20 +43,91 @@ const upload = multer({
 // Middleware: Global body parsing (Forces JSON parsing even if headers are missing)
 app.use(express.json({ type: () => true }));
 
-/**
- * Security Middleware: Validates the request against the static API_KEY.
- */
-const authMiddleware = (req, res, next) => {
-    const providedKey = req.body?.apiKey || req.query.apiKey || req.headers['x-api-key'];
-    
-    // Debug Trace to catch why requests fail in middleware
-    // logger.info({ method: req.method, path: req.path, hasBody: !!req.body, hasHeaderKey: !!req.headers['x-api-key'] }, 'Security Trace');
+// --- v3.0 Static Dashboard Engine ---
+app.use('/dashboard', express.static(path.join(__dirname, '..', 'public')));
 
-    if (!providedKey || providedKey !== apiKey) {
-        return res.status(401).json({ error: 'Unauthorized: Invalid API Key provided.' });
+/**
+ * Flexible Authorization Middleware: Accepts either a valid API_KEY 
+ * or a valid Dashboard Session Token.
+ */
+const flexibleAuth = (req, res, next) => {
+    const providedKey = req.body?.apiKey || req.query.apiKey || req.headers['x-api-key'];
+    const adminToken = req.headers['x-admin-token'];
+
+    // Check Dashboard Session First
+    if (adminToken && sessions.has(adminToken)) {
+        return next();
     }
-    next();
+
+    // Fallback to API_KEY
+    if (providedKey && providedKey === apiKey) {
+        return next();
+    }
+
+    res.status(401).json({ error: 'Unauthorized: Valid Session Token or API Key required.' });
 };
+
+// --- v3.0 Authentication & MFA Endpoints ---
+
+/**
+ * Request Dashboard Access (MFA)
+ * POST /api/auth/request
+ */
+app.post('/api/auth/request', async (req, res) => {
+    try {
+        // If not connected, allow access via API_KEY for setup
+        if (!isWhatsAppConnected()) {
+            const bodyKey = req.body?.apiKey;
+            if (bodyKey && bodyKey === apiKey) {
+                const setupToken = crypto.randomUUID();
+                sessions.add(setupToken);
+                return res.json({ status: 'setup', token: setupToken, message: 'Bridge offline. Setup mode active.' });
+            }
+            return res.status(401).json({ error: 'Auth Required: Provide API_KEY to access setup mode.' });
+        }
+
+        // If connected, trigger WhatsApp OTP
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const tokenHash = crypto.randomUUID(); // Temporary token to track the verification attempt
+        
+        otpMap.set(tokenHash, { 
+            code, 
+            expires: Date.now() + 5 * 60 * 1000, // 5 min expiry
+            ip: req.ip 
+        });
+
+        await require('./whatsapp').sendAuthCode(code);
+        res.json({ status: 'pending', attemptToken: tokenHash, message: 'OTP sent to your WhatsApp.' });
+    } catch (err) {
+        logger.error('MFA Request Error:', err);
+        res.status(500).json({ error: 'Failed to trigger MFA.' });
+    }
+});
+
+/**
+ * Verify Dashboard OTP
+ * POST /api/auth/verify
+ */
+app.post('/api/auth/verify', (req, res) => {
+    const { attemptToken, code } = req.body;
+    const record = otpMap.get(attemptToken);
+
+    if (!record || record.expires < Date.now()) {
+        otpMap.delete(attemptToken);
+        return res.status(401).json({ error: 'OTP expired or invalid.' });
+    }
+
+    if (record.code !== code) {
+        return res.status(401).json({ error: 'Incorrect OTP code.' });
+    }
+
+    // Success: Generate Long-Lived Session Token
+    const sessionToken = crypto.randomUUID();
+    sessions.add(sessionToken);
+    otpMap.delete(attemptToken);
+
+    res.json({ status: 'success', token: sessionToken });
+});
 
 // --- Session Management Endpoints ---
 
@@ -58,7 +135,7 @@ const authMiddleware = (req, res, next) => {
  * Connectivity Check
  * GET /session/status
  */
-app.get('/session/status', authMiddleware, (req, res) => {
+app.get('/session/status', flexibleAuth, (req, res) => {
     res.json({ connected: isWhatsAppConnected() });
 });
 
@@ -66,7 +143,7 @@ app.get('/session/status', authMiddleware, (req, res) => {
  * Fetch Current QR Code (Remote Pairing)
  * GET /session/qr
  */
-app.get('/session/qr', authMiddleware, (req, res) => {
+app.get('/session/qr', flexibleAuth, (req, res) => {
     const qr = getLatestQR();
     if (isWhatsAppConnected()) return res.json({ message: 'Already connected' });
     if (!qr) return res.status(404).json({ error: 'QR code not yet available. Wait a few seconds.' });
@@ -77,7 +154,7 @@ app.get('/session/qr', authMiddleware, (req, res) => {
  * Request Account Pairing Code (8-digit)
  * POST /session/pairing-code
  */
-app.post('/session/pairing-code', authMiddleware, async (req, res) => {
+app.post('/session/pairing-code', flexibleAuth, async (req, res) => {
     try {
         const { number } = req.body;
         if (!number) return res.status(400).json({ error: 'Phone number is required for pairing.' });
@@ -94,7 +171,7 @@ app.post('/session/pairing-code', authMiddleware, async (req, res) => {
  * Retrieve all Groups (ID + Name)
  * GET /session/groups
  */
-app.get('/session/groups', authMiddleware, async (req, res) => {
+app.get('/session/groups', flexibleAuth, async (req, res) => {
     try {
         const groups = await getAllGroups();
         res.json(groups);
@@ -108,7 +185,7 @@ app.get('/session/groups', authMiddleware, async (req, res) => {
  * Session Disconnect / Clear State
  * POST /session/logout
  */
-app.post('/session/logout', authMiddleware, async (req, res) => {
+app.post('/session/logout', flexibleAuth, async (req, res) => {
     try {
         await logoutSession();
         res.json({ status: 'success', message: 'Session disconnected and cleared.' });
@@ -119,10 +196,53 @@ app.post('/session/logout', authMiddleware, async (req, res) => {
 });
 
 /**
+ * Admin Telemetry
+ * GET /api/admin/stats
+ */
+app.get('/api/admin/stats', flexibleAuth, async (req, res) => {
+    try {
+        const db = await getDatabase();
+        
+        // Fetch raw counts from audit_logs
+        const stats = await new Promise((resolve, reject) => {
+            db.all(`
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status = 'Sent' OR status = 'Read' OR status = 'Delivered' THEN 1 ELSE 0 END) as success,
+                    SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) as failed,
+                    SUM(retry_count) as retries
+                FROM audit_logs
+            `, [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows[0]);
+            });
+        });
+
+        res.json({
+            status: 'success',
+            vitals: {
+                uptime: Math.floor(process.uptime()),
+                connected: isWhatsAppConnected(),
+                version: '3.0.0'
+            },
+            metrics: {
+                total_dispatched: stats.total || 0,
+                success_count: stats.success || 0,
+                failure_count: stats.failed || 0,
+                retry_volume: stats.retries || 0
+            }
+        });
+    } catch (err) {
+        logger.error('Stats Error:', err);
+        res.status(500).json({ error: 'Failed to retrieve telemetry.' });
+    }
+});
+
+/**
  * Audit Log Retreival
  * GET /logs
  */
-app.get('/logs', authMiddleware, async (req, res) => {
+app.get('/logs', flexibleAuth, async (req, res) => {
     try {
         const logs = await getRecentLogs(50);
         res.json(logs);
@@ -139,7 +259,7 @@ app.get('/health', async (req, res) => {
         status: 'online',
         whatsapp: isWhatsAppConnected() ? 'connected' : 'disconnected',
         uptime: Math.floor(process.uptime()),
-        version: '2.1.0',
+        version: '3.0.0',
         timestamp: new Date().toISOString()
     });
 });
@@ -150,7 +270,7 @@ app.get('/health', async (req, res) => {
  * Dispatch Hub
  * POST /send (Multipart/Form-Data or JSON)
  */
-app.post('/send', authMiddleware, (req, res, next) => {
+app.post('/send', flexibleAuth, (req, res, next) => {
     // Only trigger multer if the request is multipart/form-data
     if (req.headers['content-type']?.includes('multipart')) {
         return upload.any()(req, res, next);

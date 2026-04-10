@@ -145,6 +145,21 @@ async function connectToWhatsApp() {
 }
 
 /**
+ * Sends a dynamic MFA authentication code to the connected WhatsApp account (Self-Message).
+ * @param {string} code - The 6-digit OTP.
+ */
+async function sendAuthCode(code) {
+    if (!isConnected || !sock) throw new Error('WhatsApp not connected');
+    
+    // The self JID is the connected number's ID
+    const selfJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+    
+    await sock.sendMessage(selfJid, { 
+        text: `🔐 *Bridge Dashboard Access*\n\nYour one-time login code is: *${code}*\n\n_If you did not request this, please check your server security._` 
+    });
+}
+
+/**
  * Retrieves a list of all participating groups.
  * @returns {Promise<Array<{id: string, subject: string, participants: number}>>}
  */
@@ -254,6 +269,7 @@ module.exports = {
     getLatestQR: () => latestQR,
     getPairingCode,
     logoutSession,
+    sendAuthCode,
     isWhatsAppConnected: () => isConnected
 };
 

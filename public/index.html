@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Bridge | Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0d0d0d; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .wa-accent { color: #25d366; }
+        .wa-bg { background-color: #25d366; }
+        .wa-bg:hover { background-color: #1eb954; }
+        input { background: rgba(255, 255, 255, 0.05) !important; color: white !important; }
+        input:focus { border-color: #25d366 !important; ring-color: #25d366 !important; }
+        .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 text-white overflow-hidden">
+    
+    <!-- Background Decor -->
+    <div class="fixed top-0 left-0 w-full h-full -z-10 opacity-20 pointer-events-none">
+        <div class="absolute top-1/4 left-1/4 w-96 h-96 wa-bg rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-96 h-96 wa-bg rounded-full blur-[120px] opacity-50"></div>
+    </div>
+
+    <!-- Login Container -->
+    <div id="loginCard" class="glass w-full max-w-md p-8 rounded-3xl shadow-2xl transition-all duration-500 transform">
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-bold mb-2 tracking-tight">Access Dashboard</h1>
+            <p class="text-gray-400 text-sm">WhatsApp Bridge Service <span class="wa-accent">v3.0.0</span></p>
+        </div>
+
+        <!-- Mode 1: Initial Request -->
+        <div id="requestMode">
+            <p class="text-sm text-gray-300 mb-6 text-center">To ensure hardware-level security, we will send an OTP directly to your connected WhatsApp phone.</p>
+            <button id="requestBtn" class="wa-bg w-full py-4 rounded-xl font-bold text-black transition-all hover:scale-[1.02] active:scale-95">
+                Send MFA Pulse
+            </button>
+            <div id="setupNote" class="mt-4 hidden p-3 bg-red-900/20 border border-red-900/50 rounded-lg text-xs text-red-300 text-center">
+                System Offline: Use your API_KEY to access setup mode.
+            </div>
+        </div>
+
+        <!-- Mode 2: Verification -->
+        <div id="verifyMode" class="hidden">
+            <div class="mb-6">
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Verification Code</label>
+                <input type="text" id="otpCode" maxlength="6" class="w-full p-4 rounded-xl text-center text-3xl font-bold tracking-[0.5em] border border-transparent outline-none focus:border-green-500">
+            </div>
+            <button id="verifyBtn" class="wa-bg w-full py-4 rounded-xl font-bold text-black transition-all hover:scale-[1.02] active:scale-95">
+                Verify & Enter
+            </button>
+            <button id="backBtn" class="w-full mt-4 text-gray-500 text-sm hover:text-white transition-colors">Resend Code</button>
+        </div>
+
+        <!-- Status Message -->
+        <div id="msg" class="mt-8 text-center text-sm font-medium transition-all duration-300"></div>
+    </div>
+
+    <script>
+        const loginCard = document.getElementById('loginCard');
+        const reqBtn = document.getElementById('requestBtn');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const backBtn = document.getElementById('backBtn');
+        const msg = document.getElementById('msg');
+        
+        let attemptToken = '';
+
+        async function checkConnection() {
+            const res = await fetch('/health');
+            const data = await res.json();
+            if (data.whatsapp !== 'connected') {
+                document.getElementById('setupNote').classList.remove('hidden');
+                reqBtn.innerText = 'Log in via API_KEY';
+            }
+        }
+
+        reqBtn.onclick = async () => {
+            msg.innerText = 'Initializing Pulse...';
+            msg.className = 'mt-8 text-center text-sm text-gray-400 loading-pulse';
+            
+            try {
+                const isSetup = document.getElementById('setupNote').classList.contains('hidden') === false;
+                let body = {};
+                
+                if (isSetup) {
+                    const key = prompt('System is offline. Enter your API_KEY:');
+                    if (!key) return msg.innerText = '';
+                    body = { apiKey: key };
+                }
+
+                const res = await fetch('/api/auth/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    if (data.status === 'setup') {
+                        localStorage.setItem('adminToken', data.token);
+                        msg.innerText = 'Access Granted. Redirecting...';
+                        setTimeout(() => window.location.href = '/dashboard/admin.html', 1000);
+                    } else {
+                        attemptToken = data.attemptToken;
+                        document.getElementById('requestMode').classList.add('hidden');
+                        document.getElementById('verifyMode').classList.remove('hidden');
+                        msg.innerText = 'Code sent to your phone.';
+                        msg.className = 'mt-8 text-center text-sm text-green-400';
+                    }
+                } else {
+                    msg.innerText = data.error || 'Failed to authenticate.';
+                    msg.className = 'mt-8 text-center text-sm text-red-400';
+                }
+            } catch (e) {
+                msg.innerText = 'Server unreachable.';
+                msg.className = 'mt-8 text-center text-sm text-red-400';
+            }
+        };
+
+        verifyBtn.onclick = async () => {
+            const code = document.getElementById('otpCode').value;
+            if (code.length < 6) return;
+
+            msg.innerText = 'Authenticating...';
+            msg.className = 'mt-8 text-center text-sm text-gray-400 loading-pulse';
+
+            try {
+                const res = await fetch('/api/auth/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ attemptToken, code })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('adminToken', data.token);
+                    msg.innerText = 'Success! Opening Bridge...';
+                    msg.className = 'mt-8 text-center text-sm text-green-400';
+                    setTimeout(() => window.location.href = '/dashboard/admin', 1000);
+                } else {
+                    msg.innerText = data.error || 'Verification failed.';
+                    msg.className = 'mt-8 text-center text-sm text-red-400';
+                }
+            } catch (e) {
+                msg.innerText = 'Connection lost.';
+            }
+        };
+
+        backBtn.onclick = () => location.reload();
+
+        checkConnection();
+    </script>
+</body>
+</html>
