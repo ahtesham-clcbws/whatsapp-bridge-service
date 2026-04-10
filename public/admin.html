@@ -8,176 +8,174 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0d0d0d; color: white; -webkit-font-smoothing: antialiased; }
-        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .wa-accent { color: #25d366; }
-        .wa-bg { background-color: #25d366; }
-        .wa-bg:hover { background-color: #1eb954; }
-        .stat-card { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .stat-card:hover { transform: scale(1.02); background: rgba(255, 255, 255, 0.06); }
-        .tab-active { border-bottom: 2px solid #25d366; color: #25d366; }
+        body { font-family: 'Inter', sans-serif; background-color: #0b0b0b; color: #e5e7eb; -webkit-font-smoothing: antialiased; }
+        .glass { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.04); }
+        .wa-accent { color: #2ecc71; }
+        .wa-bg { background-color: #2ecc71; }
+        .wa-bg:hover { background-color: #27ae60; }
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { background: rgba(255, 255, 255, 0.05); transform: translateY(-2px); }
+        .tab-active { border-bottom: 2px solid #2ecc71; color: #2ecc71; }
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
-        .progress-bar { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+        .progress-bar { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.05); overflow: hidden; }
         .progress-fill { height: 100%; transition: width 0.5s ease; }
         
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
         
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-in { animation: fadeIn 0.4s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-in { animation: fadeIn 0.3s ease-out forwards; }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8 lg:p-12 text-gray-200">
+<body class="min-h-screen p-4 md:p-6 lg:p-8">
 
-    <!-- Top Navigation -->
-    <header class="max-w-7xl mx-auto flex items-center justify-between mb-10">
-        <div>
-            <h1 class="text-3xl font-bold tracking-tighter uppercase italic">Bridge <span class="wa-accent">Command Center</span></h1>
-            <div class="flex items-center gap-4 mt-2">
-                <p id="uptimeDisplay" class="text-[10px] text-gray-500 uppercase tracking-widest font-black">Uptime: --:--:--</p>
-                <div class="flex gap-4 items-center">
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] text-gray-500 font-black uppercase tracking-widest">CPU Sync:</span>
-                        <div class="w-16 progress-bar"><div id="cpuFill" class="progress-fill wa-bg" style="width: 0%"></div></div>
-                        <span id="cpuText" class="text-[10px] text-gray-400 font-mono">0.00</span>
-                    </div>
+    <!-- Compact Navigation -->
+    <header class="max-w-7xl mx-auto flex items-center justify-between mb-8">
+        <div class="flex items-center gap-6">
+            <h1 class="text-lg font-black tracking-tighter uppercase italic">Bridge <span class="wa-accent">v3.0 PRO</span></h1>
+            <div class="h-6 w-px bg-white/10 hidden md:block"></div>
+            <div class="flex items-center gap-4">
+                <p id="uptimeDisplay" class="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Uptime: --:--:--</p>
+                <div class="flex items-center gap-2">
+                    <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">CPU:</span>
+                    <div class="w-12 progress-bar"><div id="cpuFill" class="progress-fill wa-bg" style="width: 0%"></div></div>
+                    <span id="cpuText" class="text-[9px] text-gray-400 font-mono">0.00</span>
                 </div>
             </div>
         </div>
-        <div class="flex gap-3">
-            <button onclick="logout()" class="glass px-6 py-2.5 rounded-full text-[10px] font-black tracking-widest uppercase hover:bg-white/10 transition-all">Sign Out</button>
-        </div>
+        <button onclick="logout()" class="glass px-4 py-1.5 rounded-lg text-[9px] font-black tracking-widest uppercase hover:bg-white/10">Sign Out</button>
     </header>
 
-    <!-- Navigation Hub -->
-    <nav class="max-w-7xl mx-auto mb-10 border-b border-white/5 flex gap-10 overflow-x-auto no-scrollbar">
-        <button onclick="switchTab('telemetry')" id="tab-telemetry" class="pb-5 px-1 text-xs font-black uppercase tracking-[0.2em] transition-all tab-active">Telemetry</button>
-        <button onclick="switchTab('orchestrator')" id="tab-orchestrator" class="pb-5 px-1 text-xs font-black uppercase tracking-[0.2em] text-gray-500 transition-all">Orchestrator</button>
-        <button onclick="switchTab('directory')" id="tab-directory" class="pb-5 px-1 text-xs font-black uppercase tracking-[0.2em] text-gray-500 transition-all">Directory</button>
-        <button onclick="switchTab('vault')" id="tab-vault" class="pb-5 px-1 text-xs font-black uppercase tracking-[0.2em] text-gray-500 transition-all">Vault</button>
-        <button onclick="switchTab('settings')" id="tab-settings" class="pb-5 px-1 text-xs font-black uppercase tracking-[0.2em] text-gray-500 transition-all">Settings</button>
+    <!-- Navigation Hub (Compact) -->
+    <nav class="max-w-7xl mx-auto mb-8 border-b border-white/5 flex gap-8 overflow-x-auto no-scrollbar">
+        <button onclick="switchTab('telemetry')" id="tab-telemetry" class="pb-3 px-1 text-[10px] font-black uppercase tracking-widest transition-all tab-active">Telemetry</button>
+        <button onclick="switchTab('orchestrator')" id="tab-orchestrator" class="pb-3 px-1 text-[10px] font-black uppercase tracking-widest text-gray-500 transition-all">Orchestrator</button>
+        <button onclick="switchTab('directory')" id="tab-directory" class="pb-3 px-1 text-[10px] font-black uppercase tracking-widest text-gray-500 transition-all">Directory</button>
+        <button onclick="switchTab('vault')" id="tab-vault" class="pb-3 px-1 text-[10px] font-black uppercase tracking-widest text-gray-500 transition-all">Vault</button>
+        <button onclick="switchTab('settings')" id="tab-settings" class="pb-3 px-1 text-[10px] font-black uppercase tracking-widest text-gray-500 transition-all">Settings</button>
     </nav>
 
     <main class="max-w-7xl mx-auto">
+        
         <!-- PANE: TELEMETRY (MASTER STATUS) -->
-        <div id="pane-telemetry" class="tab-pane active animate-in space-y-10">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div class="glass p-8 rounded-[2rem] stat-card">
-                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Total Load</p>
-                    <h3 id="statTotal" class="text-4xl font-bold">0</h3>
+        <div id="pane-telemetry" class="tab-pane active animate-in space-y-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass p-5 rounded-2xl stat-card">
+                    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Total</p>
+                    <h3 id="statTotal" class="text-2xl font-bold">0</h3>
                 </div>
-                <div class="glass p-8 rounded-[2rem] stat-card border-b-4 border-b-green-500/50">
-                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Success Rate</p>
-                    <h3 id="statSuccess" class="text-4xl font-bold text-green-400">0</h3>
+                <div class="glass p-5 rounded-2xl stat-card">
+                    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 text-green-500">Success</p>
+                    <h3 id="statSuccess" class="text-2xl font-bold">0</h3>
                 </div>
-                <div class="glass p-8 rounded-[2rem] stat-card border-b-4 border-b-red-500/50">
-                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Failure Log</p>
-                    <h3 id="statFailed" class="text-4xl font-bold text-red-500">0</h3>
+                <div class="glass p-5 rounded-2xl stat-card">
+                    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 text-red-500">Failures</p>
+                    <h3 id="statFailed" class="text-2xl font-bold">0</h3>
                 </div>
-                <div class="glass p-8 rounded-[2rem] stat-card border-b-4 border-b-blue-500/50">
-                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Active Retries</p>
-                    <h3 id="statRetries" class="text-4xl font-bold text-blue-400">0</h3>
+                <div class="glass p-5 rounded-2xl stat-card">
+                    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 text-blue-500">Retries</p>
+                    <h3 id="statRetries" class="text-2xl font-bold">0</h3>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                <div class="lg:col-span-2 glass p-10 rounded-[2.5rem] space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Session Manager (Compact) -->
+                <div class="lg:col-span-2 glass p-6 rounded-3xl space-y-6">
                     <div class="flex items-center justify-between">
-                        <h2 class="text-2xl font-bold">Session Lifecycle</h2>
-                        <div id="connStatus" class="flex items-center gap-3 px-5 py-2 rounded-full bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-widest">
-                            <div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></div>
-                            Disconnected
+                        <h2 class="text-sm font-black uppercase tracking-widest italic">Session Interface</h2>
+                        <div id="connStatus" class="flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 text-red-400 text-[8px] font-black uppercase tracking-widest">
+                            <div class="w-1 h-1 rounded-full bg-red-500 pulse"></div>
+                            Offline
                         </div>
                     </div>
-                    <div id="connectUI" class="p-16 border-4 border-dashed border-white/5 rounded-[2rem] text-center space-y-8">
-                        <div class="mx-auto w-24 h-24 wa-bg/10 rounded-3xl flex items-center justify-center">
-                            <svg class="w-12 h-12 wa-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                        </div>
+                    <div id="connectUI" class="p-10 border-2 border-dashed border-white/5 rounded-2xl text-center space-y-6">
                         <div>
-                            <h4 class="text-xl font-bold uppercase italic">Unlinked Instance</h4>
-                            <p class="text-gray-500 mt-2 text-xs font-medium tracking-wide">Sync with WhatsApp to start the bridge engine.</p>
+                            <h4 class="text-sm font-bold uppercase italic">Link Account</h4>
+                            <p class="text-[10px] text-gray-500 mt-1 uppercase tracking-tighter">Sync WhatsApp to start the bridge.</p>
                         </div>
-                        <div class="flex gap-4 justify-center">
-                            <button onclick="fetchQR()" class="wa-bg px-10 py-4 rounded-2xl text-black font-black text-xs uppercase tracking-widest btn-action">Generate QR</button>
-                            <button onclick="promptPairing()" class="glass px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white/10 btn-action">8-Digit Pair</button>
+                        <div class="flex gap-3 justify-center">
+                            <button onclick="fetchQR()" class="wa-bg px-6 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest">QR LINK</button>
+                            <button onclick="promptPairing()" class="glass px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest">PAIRING</button>
                         </div>
-                        <div id="qrContainer" class="hidden mx-auto p-6 bg-white rounded-3xl w-max shadow-2xl">
+                        <div id="qrContainer" class="hidden mx-auto p-4 bg-white rounded-2xl w-max">
                              <div id="qrcode"></div>
                         </div>
                     </div>
-                    <div id="activeUI" class="hidden p-10 bg-green-500/5 border border-green-500/20 rounded-[2rem] flex items-center gap-10">
-                        <div class="w-20 h-20 wa-bg rounded-3xl flex items-center justify-center text-black shadow-lg shadow-green-500/20">
-                            <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    <div id="activeUI" class="hidden p-6 bg-green-500/5 border border-green-500/10 rounded-2xl flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 wa-bg rounded-xl flex items-center justify-center text-black">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-black uppercase tracking-wider italic">Bridge Operational</h4>
+                                <p class="text-[10px] text-gray-500 uppercase tracking-tighter">Connected as Admin. Listening for dispatches.</p>
+                            </div>
                         </div>
-                        <div class="flex-1">
-                            <h4 class="text-xl font-black uppercase italic">Bridge Active</h4>
-                            <p class="text-gray-400 text-xs mt-1 font-medium italic">Comm-Link synchronized. Multi-recipient engine listening.</p>
-                        </div>
-                        <button onclick="disconnect()" class="bg-red-500/20 text-red-400 px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500/30">Destroy Link</button>
+                        <button onclick="disconnect()" class="bg-red-500/10 text-red-500 px-5 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-red-500/20">Purge</button>
                     </div>
                 </div>
-                <div class="glass p-10 rounded-[2.5rem]">
-                    <h2 class="text-xl font-black uppercase italic tracking-widest mb-8">Event Pulse</h2>
-                    <div id="logList" class="space-y-4 max-h-[500px] overflow-y-auto pr-3">
-                        <p class="text-gray-600 text-[10px] font-black uppercase tracking-tighter">Synchronizing logs...</p>
+
+                <!-- Event Pulse (Corrected Dates) -->
+                <div class="glass p-6 rounded-3xl">
+                    <h2 class="text-sm font-black uppercase tracking-widest italic mb-6">Event Pulse</h2>
+                    <div id="logList" class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                        <p class="text-gray-700 text-[9px] font-black uppercase italic">Retrieving stream...</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- PANE: ORCHESTRATOR (DISPATCH) -->
-        <div id="pane-orchestrator" class="tab-pane animate-in space-y-10 max-w-4xl mx-auto">
-            <div class="glass p-12 rounded-[3rem] shadow-2xl">
-                <h2 class="text-3xl font-black uppercase italic tracking-tighter mb-8 italic">Direct Dispatch</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                    <div class="space-y-3">
-                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Recipient Identity</label>
-                        <input type="text" id="sendNumber" placeholder="Number or JID" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl outline-none focus:border-green-500 transition-all font-mono text-xs uppercase">
+        <div id="pane-orchestrator" class="tab-pane animate-in space-y-6 max-w-3xl mx-auto">
+            <div class="glass p-8 rounded-3xl">
+                <h2 class="text-lg font-black uppercase tracking-widest italic mb-6">Orchestration Hub</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-black text-gray-500 uppercase tracking-widest">Recipient Identity</label>
+                        <input type="text" id="sendNumber" placeholder="91XXXXXXXXXX" class="w-full bg-white/5 border border-white/5 p-4 rounded-xl outline-none focus:border-green-500 transition-all font-mono text-xs">
                     </div>
-                    <div class="space-y-3">
-                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Payload Class</label>
-                        <select id="sendType" class="w-full bg-[#111] border border-white/10 p-5 rounded-2xl outline-none focus:border-green-500 transition-all text-[10px] font-black tracking-widest appearance-none">
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-black text-gray-500 uppercase tracking-widest">Payload Class</label>
+                        <select id="sendType" class="w-full bg-black border border-white/5 p-4 rounded-xl outline-none focus:border-green-500 transition-all text-[9px] font-black uppercase tracking-widest">
                             <option value="text">TEXT PROTOCOL</option>
-                            <option value="image">IMAGE MEDIA</option>
+                            <option value="image">IMAGE DATA</option>
                             <option value="document">DOCUMENT/PDF</option>
                         </select>
                     </div>
                 </div>
-                <div class="space-y-3 mb-8">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Dispatch Content</label>
-                    <textarea id="sendText" rows="6" placeholder="Enter payload..." class="w-full bg-white/5 border border-white/10 p-5 rounded-[2rem] outline-none focus:border-green-500 transition-all text-xs font-medium"></textarea>
+                <div class="space-y-2 mb-6">
+                    <label class="text-[9px] font-black text-gray-500 uppercase tracking-widest">Payload Content</label>
+                    <textarea id="sendText" rows="4" placeholder="Enter content..." class="w-full bg-white/5 border border-white/5 p-4 rounded-xl outline-none focus:border-green-500 transition-all text-xs"></textarea>
                 </div>
-                <div id="fileArea" class="hidden mb-10 p-10 border-2 border-dashed border-white/10 rounded-[2rem] text-center">
+                <div id="fileArea" class="hidden mb-6 p-6 border-2 border-dashed border-white/5 rounded-xl text-center">
                     <input type="file" id="sendFile" class="hidden">
-                    <button onclick="document.getElementById('sendFile').click()" class="text-[10px] font-black uppercase tracking-[0.2em] wa-accent">Select Media File</button>
-                    <p id="fileName" class="text-[10px] text-gray-500 mt-2 font-mono uppercase"></p>
+                    <button onclick="document.getElementById('sendFile').click()" class="text-[9px] font-black uppercase tracking-widest wa-accent">+ SELECT MEDIA</button>
+                    <p id="fileName" class="text-[9px] text-gray-500 mt-2 font-mono uppercase"></p>
                 </div>
-                <button id="dispatchBtn" onclick="performDispatch()" class="wa-bg w-full py-5 rounded-2xl text-black font-black tracking-[0.3em] uppercase text-xs shadow-xl shadow-green-500/10">Fire Message</button>
-                <div id="dispatchMsg" class="mt-8 text-center text-[10px] font-black italic tracking-widest"></div>
+                <button id="dispatchBtn" onclick="performDispatch()" class="wa-bg w-full py-4 rounded-xl text-black font-bold uppercase text-[10px] tracking-widest font-black">Fire Pulse</button>
+                <div id="dispatchMsg" class="mt-4 text-center text-[9px] font-bold uppercase tracking-widest italic"></div>
             </div>
         </div>
 
         <!-- PANE: DIRECTORY (GROUPS) -->
-        <div id="pane-directory" class="tab-pane animate-in space-y-10">
-            <div class="glass p-12 rounded-[3rem]">
-                <div class="flex items-center justify-between mb-10">
-                    <h2 class="text-3xl font-black uppercase tracking-tighter italic">Network Directory</h2>
-                    <button onclick="fetchGroups()" class="glass px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Manual Sync</button>
+        <div id="pane-directory" class="tab-pane animate-in">
+            <div class="glass p-8 rounded-3xl">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-lg font-black uppercase tracking-widest italic">Network Directory</h2>
+                    <button onclick="fetchGroups()" class="glass px-4 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest">Sync</button>
                 </div>
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto text-[10px]">
                     <table class="w-full text-left">
                         <thead>
-                            <tr class="text-[10px] text-gray-500 uppercase tracking-[0.2em] border-b border-white/5">
-                                <th class="pb-6">Subject</th>
-                                <th class="pb-6">JID / Identifier</th>
-                                <th class="pb-6">UID Count</th>
-                                <th class="pb-6 text-right">Link Status</th>
+                            <tr class="text-[9px] text-gray-500 uppercase tracking-widest border-b border-white/5">
+                                <th class="pb-4">Subject</th>
+                                <th class="pb-4">JID Identity</th>
+                                <th class="pb-4">Peers</th>
+                                <th class="pb-4 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="groupTableBody" class="text-xs font-bold uppercase tracking-wider">
+                        <tbody id="groupTableBody" class="font-bold uppercase">
                             <!-- Injected -->
                         </tbody>
                     </table>
@@ -186,27 +184,25 @@
         </div>
 
         <!-- PANE: VAULT (TEMPLATES) -->
-        <div id="pane-vault" class="tab-pane animate-in space-y-10 max-w-4xl mx-auto">
-            <div class="glass p-12 rounded-[3rem]">
-                <h2 class="text-3xl font-black uppercase tracking-tighter italic mb-10">Template Vault</h2>
-                <div class="flex gap-4 mb-16">
-                    <input type="text" id="tplName" placeholder="PROTOCOL NAME" class="flex-1 bg-white/5 border border-white/10 p-5 rounded-2xl outline-none focus:border-green-500 transition-all text-[10px] font-black tracking-widest">
-                    <button onclick="saveTemplate()" class="wa-bg px-10 py-5 rounded-2xl text-black font-black text-[10px] uppercase tracking-widest">Secure Entry</button>
+        <div id="pane-vault" class="tab-pane animate-in max-w-3xl mx-auto space-y-6">
+            <div class="glass p-8 rounded-3xl">
+                <h2 class="text-lg font-black uppercase tracking-widest italic mb-6">Vault</h2>
+                <div class="flex gap-4 mb-8">
+                    <input type="text" id="tplName" placeholder="NAME" class="flex-1 bg-white/5 border border-white/5 p-4 rounded-xl outline-none focus:border-green-500 text-[10px] font-black tracking-widest">
+                    <button onclick="saveTemplate()" class="wa-bg px-6 py-4 rounded-xl text-black font-black text-[9px] uppercase tracking-widest">Store</button>
                 </div>
-                <div id="tplList" class="space-y-6">
-                    <!-- Templates -->
-                </div>
+                <div id="tplList" class="space-y-4"></div>
             </div>
         </div>
 
         <!-- PANE: SETTINGS -->
-        <div id="pane-settings" class="tab-pane animate-in space-y-10 max-w-4xl mx-auto">
-            <div class="glass p-12 rounded-[3rem]">
-                <h2 class="text-3xl font-black uppercase tracking-tighter italic mb-10">Global Config</h2>
-                <div id="configGrid" class="space-y-6">
-                    <div class="p-8 bg-white/5 rounded-3xl flex justify-between items-center text-xs">
-                        <div><p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Webhook Callback</p><h4 id="confWebhook" class="font-mono mt-1 text-white">--</h4></div>
-                        <span class="text-[10px] wa-accent font-black tracking-widest">ENVIRONMENT BASE</span>
+        <div id="pane-settings" class="tab-pane animate-in max-w-3xl mx-auto space-y-6">
+            <div class="glass p-8 rounded-3xl">
+                <h2 class="text-lg font-black uppercase tracking-widest italic mb-6">System Config</h2>
+                <div id="configGrid" class="space-y-3">
+                    <div class="p-5 glass rounded-xl flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
+                        <div><p class="text-gray-500 mb-1">Webhook Target</p><h4 id="confWebhook" class="text-white font-mono">--</h4></div>
+                        <span class="text-[8px] wa-accent">Read-Only</span>
                     </div>
                 </div>
             </div>
@@ -217,47 +213,42 @@
         const token = localStorage.getItem('adminToken');
         if (!token) window.location.href = '/dashboard/';
 
-        // --- Core Fetcher ---
+        function formatDate(ds) {
+            if (!ds) return '--:--';
+            // SQLite CURRENT_TIMESTAMP is "YYYY-MM-DD HH:MM:SS" -> Browser needs "YYYY-MM-DDTHH:MM:SSZ"
+            const safe = ds.replace(' ', 'T') + 'Z';
+            const d = new Date(safe);
+            return isNaN(d.getTime()) ? ds : d.toLocaleString();
+        }
+
         async function api(path, method = 'GET', body = null) {
-            const options = {
-                method,
-                headers: { 'x-admin-token': token }
-            };
+            const options = { method, headers: { 'x-admin-token': token } };
             if (body && !(body instanceof FormData)) {
                 options.headers['Content-Type'] = 'application/json';
                 options.body = JSON.stringify(body);
-            } else if (body instanceof FormData) {
-                options.body = body;
-            }
+            } else if (body instanceof FormData) { options.body = body; }
             const res = await fetch(path, options);
             if (res.status === 401) logout();
             return res.json();
         }
 
-        // --- Tab Management ---
         function switchTab(id) {
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.remove('tab-active', 'text-white'));
             document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.add('text-gray-500'));
-            const tab = document.getElementById(`tab-${id}`);
             document.getElementById(`pane-${id}`).classList.add('active');
-            tab.classList.add('tab-active', 'text-white');
-            tab.classList.remove('text-gray-500');
+            document.getElementById(`tab-${id}`).classList.add('tab-active', 'text-white');
+            document.getElementById(`tab-${id}`).classList.remove('text-gray-500');
 
             if (id === 'orchestrator') {
-               document.getElementById('sendType').addEventListener('change', (e) => {
-                   document.getElementById('fileArea').className = e.target.value === 'text' ? 'hidden' : 'block mb-10 p-10 border-2 border-dashed border-white/10 rounded-[2rem] text-center';
-               });
-               document.getElementById('sendFile').addEventListener('change', (e) => {
-                   document.getElementById('fileName').innerText = e.target.files[0] ? e.target.files[0].name.toUpperCase() : '';
-               });
+               document.getElementById('sendType').onchange = (e) => document.getElementById('fileArea').style.display = e.target.value === 'text' ? 'none' : 'block';
+               document.getElementById('sendFile').onchange = (e) => document.getElementById('fileName').innerText = e.target.files[0]?.name.toUpperCase() || '';
             }
             if (id === 'directory') fetchGroups();
             if (id === 'vault') renderTemplates();
             if (id === 'settings') fetchConfig();
         }
 
-        // --- Telemetry & Vitals ---
         async function refreshStats() {
             const data = await api('/api/admin/stats');
             if (data.status === 'success') {
@@ -267,153 +258,77 @@
                 document.getElementById('statRetries').innerText = data.metrics.retry_volume;
                 document.getElementById('cpuFill').style.width = `${Math.min(data.vitals.cpu_load * 20, 100)}%`;
                 document.getElementById('cpuText').innerText = data.vitals.cpu_load;
-
                 const up = data.vitals.uptime;
-                const h = Math.floor(up / 3600); const m = Math.floor((up % 3600) / 60); const s = up % 60;
+                const h = Math.floor(up / 3600), m = Math.floor((up % 3600) / 60), s = up % 60;
                 document.getElementById('uptimeDisplay').innerText = `Uptime: ${h}h ${m}m ${s}s`;
-
-                const statusDiv = document.getElementById('connStatus');
+                const sDiv = document.getElementById('connStatus');
                 if (data.vitals.connected) {
-                    statusDiv.innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-green-400"></div> CONNECTED';
-                    statusDiv.className = 'flex items-center gap-3 px-5 py-2 rounded-full bg-green-500/10 text-green-400 text-[10px] font-black uppercase tracking-widest';
-                    document.getElementById('activeUI').classList.remove('hidden');
-                    document.getElementById('connectUI').classList.add('hidden');
+                    sDiv.innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-green-400"></div> Connected';
+                    sDiv.className = 'flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-[8px] font-black uppercase tracking-widest';
+                    document.getElementById('activeUI').style.display = 'flex';
+                    document.getElementById('connectUI').style.display = 'none';
                 } else {
-                    statusDiv.innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping"></div> DISCONNECTED';
-                    statusDiv.className = 'flex items-center gap-3 px-5 py-2 rounded-full bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-widest';
-                    document.getElementById('activeUI').classList.add('hidden');
-                    document.getElementById('connectUI').classList.remove('hidden');
+                    sDiv.innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></div> Disconnected';
+                    document.getElementById('activeUI').style.display = 'none';
+                    document.getElementById('connectUI').style.display = 'block';
                 }
             }
         }
 
-        async function fetchConfig() {
-            const data = await api('/api/admin/settings');
-            document.getElementById('confWebhook').innerText = data.webhook_url;
-        }
+        async function fetchConfig() { const data = await api('/api/admin/settings'); document.getElementById('confWebhook').innerText = data.webhook_url; }
 
         async function fetchGroups() {
-            const tbody = document.getElementById('groupTableBody');
-            tbody.innerHTML = '<tr><td colspan="4" class="py-12 text-center text-gray-700 italic font-black uppercase tracking-[0.3em]">Mapping Network...</td></tr>';
-            const groups = await api('/session/groups');
-            tbody.innerHTML = groups.map(g => `
-                <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
-                    <td class="py-7 max-w-[200px] truncate">${g.subject}</td>
-                    <td class="py-7 font-mono text-[10px] text-gray-500 select-all">${g.id}</td>
-                    <td class="py-7 text-gray-500">${g.participants} UID</td>
-                    <td class="py-7 text-right">
-                        <button onclick="useRecipient('${g.id}')" class="wa-accent border border-green-500/20 px-4 py-1.5 rounded-lg hover:bg-green-500/5 transition-all">LINK</button>
-                    </td>
+            const tb = document.getElementById('groupTableBody');
+            tb.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-gray-700 italic">Mapping...</td></tr>';
+            const grps = await api('/session/groups');
+            tb.innerHTML = grps.map(g => `
+                <tr class="border-b border-white/5 hover:bg-white/5">
+                    <td class="py-4 truncate max-w-[150px]">${g.subject}</td>
+                    <td class="py-4 font-mono text-gray-500 select-all">${g.id}</td>
+                    <td class="py-4 text-gray-400">${g.participants} UID</td>
+                    <td class="py-4 text-right"><button onclick="useRecipient('${g.id}')" class="wa-accent border border-green-500/10 px-3 py-1 rounded hover:bg-green-500/5 uppercase">Link</button></td>
                 </tr>
             `).join('');
         }
-
-        function useRecipient(jid) { document.getElementById('sendNumber').value = jid; switchTab('orchestrator'); }
+        function useRecipient(j) { document.getElementById('sendNumber').value = j; switchTab('orchestrator'); }
 
         async function performDispatch() {
-            const num = document.getElementById('sendNumber').value;
-            const text = document.getElementById('sendText').value;
-            const type = document.getElementById('sendType').value;
-            const file = document.getElementById('sendFile').files[0];
-            const btn = document.getElementById('dispatchBtn');
-            const msg = document.getElementById('dispatchMsg');
-
-            if (!num || !text) return;
-            btn.disabled = true; btn.innerText = 'ILLUMINATIC PULSE...';
-
-            const fd = new FormData();
-            fd.append('number', num); fd.append('text', text); fd.append('type', type);
-            if (file) fd.append('file', file);
-
+            const n = document.getElementById('sendNumber').value, t = document.getElementById('sendText').value, ty = document.getElementById('sendType').value, f = document.getElementById('sendFile').files[0], b = document.getElementById('dispatchBtn'), m = document.getElementById('dispatchMsg');
+            if (!n || !t) return;
+            b.disabled = true; b.innerText = 'FIRING PULSE...';
+            const fd = new FormData(); fd.append('number', n); fd.append('text', t); fd.append('type', ty); if (f) fd.append('file', f);
             try {
-                const data = await api('/send', 'POST', fd);
-                if (data.status === 'success') {
-                    msg.innerText = 'DISPATCH SUCCESSFUL'; msg.className = 'mt-8 text-center text-[10px] text-green-400 font-black tracking-widest italic';
-                    document.getElementById('sendText').value = '';
-                } else {
-                    msg.innerText = 'DISPATCH DAMPENED'; msg.className = 'mt-8 text-center text-[10px] text-red-400 font-black tracking-widest italic';
-                }
-            } catch (e) {
-                msg.innerText = 'COMM-LINK FAILURE';
-            } finally { setTimeout(() => { btn.disabled = false; btn.innerText = 'FIRE MESSAGE'; }, 1000); }
-        }
-
-        function saveTemplate() {
-            const name = document.getElementById('tplName').value;
-            const text = document.getElementById('sendText').value;
-            if (!name || !text) return;
-            const tpls = JSON.parse(localStorage.getItem('waTpls') || '[]');
-            tpls.push({ name, text });
-            localStorage.setItem('waTpls', JSON.stringify(tpls));
-            document.getElementById('tplName').value = '';
-            renderTemplates();
+                const d = await api('/send', 'POST', fd);
+                if (d.status === 'success') { m.innerText = 'SUCCESSFUL'; m.className = 'mt-4 text-center text-[9px] text-green-400 font-black tracking-widest'; document.getElementById('sendText').value = ''; }
+                else { m.innerText = 'FAILED'; m.className = 'mt-4 text-center text-[9px] text-red-400 font-black tracking-widest'; }
+            } catch (e) { m.innerText = 'COMM ERROR'; } finally { setTimeout(() => { b.disabled = false; b.innerText = 'FIRE PULSE'; }, 1000); }
         }
 
         async function renderTemplates() {
-            const list = document.getElementById('tplList');
-            const personal = JSON.parse(localStorage.getItem('waTpls') || '[]');
-            let global = [];
-            try { global = await api('/api/admin/templates'); } catch (e) {}
-            let html = '';
-            if (global.length > 0) {
-                html += '<p class="text-[10px] font-black wa-accent tracking-[0.3em] uppercase mb-8 italic">Master Protocols</p>';
-                html += global.map(t => `
-                    <div class="p-8 glass rounded-3xl flex items-center justify-between mb-6 border-l-4 border-l-green-500/30">
-                        <div><h4 class="font-black text-xs uppercase tracking-widest">${t.name}</h4><p class="text-[10px] text-gray-500 mt-2 truncate max-w-[400px]">${t.text}</p></div>
-                        <button onclick="applyTpl(\`${t.text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="text-[10px] font-black uppercase tracking-widest wa-accent border border-green-500/20 px-6 py-2 rounded-xl">Load</button>
-                    </div>
-                `).join('');
-            }
-            if (personal.length > 0) {
-                html += '<p class="text-[10px] font-black text-gray-500 tracking-[0.3em] uppercase my-12 italic">Personal Legacy</p>';
-                html += personal.map((t, i) => `
-                    <div class="p-8 glass rounded-3xl flex items-center justify-between mb-6">
-                        <div><h4 class="font-black text-xs uppercase tracking-widest">${t.name}</h4><p class="text-[10px] text-gray-500 mt-2 truncate max-w-[400px]">${t.text}</p></div>
-                        <div class="flex gap-4">
-                            <button onclick="applyTpl(\`${t.text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="text-[10px] font-black uppercase tracking-widest wa-accent px-4 py-2">Load</button>
-                            <button onclick="delTpl(${i})" class="text-[10px] font-black uppercase tracking-widest text-red-500 px-4 py-2">Purge</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            list.innerHTML = html || '<p class="text-center italic text-gray-700 font-black uppercase tracking-widest py-10">Vault Empty</p>';
+            const l = document.getElementById('tplList'), p = JSON.parse(localStorage.getItem('waTpls')||'[]');
+            let g = []; try { g = await api('/api/admin/templates'); } catch(e){}
+            let h = '';
+            if (g.length) h += '<p class="text-[8px] font-black wa-accent tracking-widest uppercase mb-4 italic">Global Protocols</p>' + g.map(t => `<div class="p-4 glass rounded-xl flex items-center justify-between mb-3 border-l-2 border-l-green-500/30"><div><h4 class="font-black text-[9px] uppercase tracking-widest">${t.name}</h4><p class="text-[8px] text-gray-600 mt-1 truncate max-w-[300px]">${t.text}</p></div><button onclick="applyTpl(\`${t.text.replace(/`/g,'\\`').replace(/\$/g,'\\$')}\`)" class="text-[8px] font-black uppercase tracking-widest wa-accent px-4 py-1">Load</button></div>`).join('');
+            if (p.length) h += '<p class="text-[8px] font-black text-gray-500 tracking-widest uppercase my-6 italic">Personal Legacy</p>' + p.map((t, i) => `<div class="p-4 glass rounded-xl flex items-center justify-between mb-3"><div><h4 class="font-black text-[9px] uppercase tracking-widest">${t.name}</h4><p class="text-[8px] text-gray-600 mt-1 truncate max-w-[300px]">${t.text}</p></div><div class="flex gap-4"><button onclick="applyTpl(\`${t.text.replace(/`/g,'\\`').replace(/\$/g,'\\$')}\`)" class="text-[8px] font-black wa-accent">Load</button><button onclick="delTpl(${i})" class="text-[8px] font-black text-red-500">Purge</button></div></div>`).join('');
+            l.innerHTML = h || '<p class="text-center italic text-gray-800 text-[9px]">Vault Empty</p>';
         }
 
-        function applyTpl(text) { document.getElementById('sendText').value = text; switchTab('orchestrator'); }
-        function delTpl(i) {
-            const tpls = JSON.parse(localStorage.getItem('waTpls') || '[]');
-            tpls.splice(i, 1); localStorage.setItem('waTpls', JSON.stringify(tpls));
-            renderTemplates();
-        }
+        function saveTemplate() { const n = document.getElementById('tplName').value, t = document.getElementById('sendText').value; if (!n || !t) return; const ts = JSON.parse(localStorage.getItem('waTpls')||'[]'); ts.push({name:n, text:t}); localStorage.setItem('waTpls', JSON.stringify(ts)); document.getElementById('tplName').value = ''; renderTemplates(); }
+        function applyTpl(t) { document.getElementById('sendText').value = t; switchTab('orchestrator'); }
+        function delTpl(i) { const ts = JSON.parse(localStorage.getItem('waTpls')||'[]'); ts.splice(i, 1); localStorage.setItem('waTpls', JSON.stringify(ts)); renderTemplates(); }
 
         async function fetchLogs() {
-            const logs = await api('/logs');
-            const list = document.getElementById('logList');
-            list.innerHTML = logs.map(l => `
-                <div class="p-4 bg-white/5 rounded-2xl text-[10px] font-bold uppercase mb-3 border border-white/5">
-                    <div class="flex justify-between tracking-widest"><span class="text-gray-500">${l.recipient}</span><span class="${l.status === 'Sent' || l.status === 'Read' || l.status === 'Delivered' ? 'text-green-500' : 'text-red-500'}">${l.status}</span></div>
-                    <div class="text-[9px] text-gray-600 mt-1 font-mono">${new Date(l.created_at).toLocaleString()}</div>
+            const l = await api('/logs'), list = document.getElementById('logList');
+            list.innerHTML = l.map(log => `
+                <div class="p-3 bg-white/5 rounded-xl text-[9px] font-bold uppercase transition-all">
+                    <div class="flex justify-between items-center"><span class="text-gray-500 truncate max-w-[100px]">${log.recipient}</span><span class="${log.status === 'Sent' || log.status === 'Read' || log.status === 'Delivered' ? 'text-green-500' : 'text-red-500'}">${log.status}</span></div>
+                    <div class="text-[7px] text-gray-600 mt-0.5 font-mono">${formatDate(log.created_at)}</div>
                 </div>
             `).join('');
         }
 
-        async function fetchQR() {
-            const data = await api('/session/qr');
-            if (data.qr) {
-                document.getElementById('qrContainer').classList.remove('hidden');
-                document.getElementById('qrcode').innerHTML = '';
-                new QRCode(document.getElementById('qrcode'), { text: data.qr, width: 220, height: 220 });
-            }
-        }
-
-        async function promptPairing() {
-            const num = prompt("E.164 Number:");
-            if (num) {
-                const data = await api('/session/pairing-code', 'POST', { number: num });
-                if (data.code) alert(`Pairing Code: ${data.code}`);
-            }
-        }
-
+        async function fetchQR() { const d = await api('/session/qr'); if (d.qr) { document.getElementById('qrContainer').classList.remove('hidden'); document.getElementById('qrcode').innerHTML = ''; new QRCode(document.getElementById('qrcode'), { text: d.qr, width: 140, height: 140 }); } }
+        async function promptPairing() { const n = prompt("E.164 Number:"); if (n) { const d = await api('/session/pairing-code', 'POST', { number: n }); if (d.code) alert(`Pairing Code: ${d.code}`); } }
         async function disconnect() { if (confirm("Terminate?")) { await api('/session/logout', 'POST'); location.reload(); } }
         function logout() { localStorage.removeItem('adminToken'); window.location.href = '/dashboard/'; }
 
