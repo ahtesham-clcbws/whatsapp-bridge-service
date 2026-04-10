@@ -1,4 +1,4 @@
-# 🚀 WhatsApp Bridge Service (v2.0.0)
+# 🚀 WhatsApp Bridge Service (v2.3.0)
 
 A generic, headless, and modular **WhatsApp-to-HTTP Bridge** designed for reliable automated messaging. Built with Node.js and the Baileys library, this service provides a high-level API to dispatch text and media messages to individuals and groups with enterprise-grade stability.
 
@@ -9,47 +9,30 @@ A generic, headless, and modular **WhatsApp-to-HTTP Bridge** designed for reliab
 - `[x]` **Group & Individual Support**: Seamlessly message phone numbers or Group JIDs.
 - `[x]` **Multipart Media API**: High-performance endpoint for text, images, and documents.
 - `[x]` **Weekly SQLite Audit Logs**: High-efficiency database archiving.
+- `[x]` **Webhook Engine**: Real-time delivery receipts and incoming message callbacks.
+- `[x]` **Exponential Backoff Retry**: Automated recovery for temporary socket failures.
 - `[x]` **API-based Log Access**: Secured `GET /logs` endpoint for history.
-- `[x]` **Universal SDK Support**: 11+ language examples (PHP, Laravel, React, etc.).
-- `[x]` **Resilient Body Parsing**: Supports JSON dispatches even without strict headers.
+- `[x]` **VitePress Documentation**: High-fidelity, versioned documentation system.
 
 ---
 
-## 🛠️ API & Testing
+## 🛠️ API & Documentation
 
-The service is designed to be tested with any REST client (Insomnia, Postman, cURL).
+For full technical details, authentication guides, andSDK examples, visit our official documentation site:
 
-### Sending a Group Message (JSON)
-```json
-POST /send
-Headers: { "x-api-key": "your_api_key" }
-Body:
-{
-  "number": "120363000000000000@g.us",
-  "type": "text",
-  "text": "Hello from the API!"
-}
-```
-
-### Fetching Group IDs
-```http
-GET /session/groups
-Headers: { "x-api-key": "your_api_key" }
-```
-
----
-
-## 🗺️ Future Roadmap
-
-- `[ ]` **Webhook Callbacks**: Forward delivery receipts and incoming messages to your backend.
-- `[ ]` **Message Retry Queue**: Automatic retries for failed dispatches during socket drops.
-- `[ ]` **Advanced Dashboard**: Admin UI for viewing logs and managing sessions.
+👉 **[Launch Documentation Portal](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/)**
 
 ---
 
 ## ☁️ Deployment Guide
 
-Check our detailed [Deployment Guide](./docs/deployment.md) for step-by-step setup on Oracle Cloud, Hostinger, and more.
+Check our detailed **[Deployment Guide](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/deployment)** for step-by-step setup on Oracle Cloud, Hostinger, and more.
+
+---
+
+## 🤝 Acknowledgements
+
+This project is built on the shoulders of giants. See our **[Acknowledgements](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/acknowledgments)** page for details on the authors and technologies involved.
 
 ---
 
