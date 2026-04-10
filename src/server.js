@@ -246,6 +246,25 @@ app.get('/api/admin/templates', flexibleAuth, (req, res) => {
     }
 });
 /**
+ * Remote System Maintenance
+ */
+app.post('/api/admin/system/update', flexibleAuth, (req, res) => {
+    const { exec } = require('child_process');
+    exec('git pull origin master', (err, stdout, stderr) => {
+        if (err) return res.status(500).json({ status: 'error', message: err.message, log: stderr });
+        res.json({ status: 'success', message: 'Repository Synchronized.', log: stdout });
+    });
+});
+
+app.post('/api/admin/system/reboot', flexibleAuth, async (req, res) => {
+    res.json({ status: 'success', message: 'Service rebooting... Syncing session.' });
+    setTimeout(() => {
+        logger.info('Maintenance Reboot Triggered via Admin Panel.');
+        process.exit(0);
+    }, 2000);
+});
+
+/**
  * Dynamic Configuration Management
  * GET /api/admin/settings
  */
@@ -253,7 +272,9 @@ app.get('/api/admin/settings', flexibleAuth, (req, res) => {
     res.json({
         webhook_url: process.env.WEBHOOK_URL || 'Not Set',
         max_retries: process.env.MAX_RETRIES || 3,
-        file_limit: process.env.MAX_FILE_SIZE || '50MB'
+        file_limit: process.env.MAX_FILE_SIZE || '50MB',
+        node_version: process.version,
+        platform: process.platform
     });
 });
 
