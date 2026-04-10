@@ -38,6 +38,7 @@ function getCurrentWeekId() {
 
 /**
  * Initializes/Connects to the database for the current week.
+ * Includes auto-migration to ensure all necessary columns exist.
  * @returns {Promise<sqlite3.Database>}
  */
 function getDatabase() {
@@ -51,19 +52,39 @@ function getDatabase() {
                 return reject(err);
             }
             
-            // Create Audit Logs table if it doesn't exist
-            db.run(`
-                CREATE TABLE IF NOT EXISTS audit_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    recipient TEXT NOT NULL,
-                    status TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    metadata TEXT,
-                    error TEXT
-                )
-            `, (err) => {
-                if (err) return reject(err);
+            // Create/Upgrade Audit Logs table
+            db.serialize(() => {
+                // Initial Table Creation
+                db.run(`
+                    CREATE TABLE IF NOT EXISTS audit_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        recipient TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        metadata TEXT,
+                        error TEXT,
+                        whatsapp_id TEXT,
+                        retry_count INTEGER DEFAULT 0
+                    )
+                `);
+
+                // Auto-Migration: Add whatsapp_id if missing from early v1.x databases
+                db.all("PRAGMA table_info(audit_logs)", (err, columns) => {
+                    if (err) return;
+                    const hasWhatsappId = columns.some(c => c.name === 'whatsapp_id');
+                    const hasRetryCount = columns.some(c => c.name === 'retry_count');
+
+                    if (!hasWhatsappId) {
+                        db.run("ALTER TABLE audit_logs ADD COLUMN whatsapp_id TEXT");
+                        logger.info('Database Migration: Added whatsapp_id column');
+                    }
+                    if (!hasRetryCount) {
+                        db.run("ALTER TABLE audit_logs ADD COLUMN retry_count INTEGER DEFAULT 0");
+                        logger.info('Database Migration: Added retry_count column');
+                    }
+                });
+
                 resolve(db);
             });
         });

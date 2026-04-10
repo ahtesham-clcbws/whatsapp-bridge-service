@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-bridge-service",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "A generic, headless, and modular WhatsApp to HTTP bridge service. Securely dispatch messages, images, and documents via a high-level multipart API.",
   "main": "src/index.js",
   "author": "Ahtesham",
@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.9",
+    "axios": "^1.15.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "multer": "^1.4.5-lts.1",

@@ -17,6 +17,7 @@ const { Boom } = require('@hapi/boom');
 const { getDatabase } = require('./database');
 const fs = require('fs');
 const path = require('path');
+const { notifyWebhook } = require('./webhook');
 require('dotenv').config();
 
 /**
@@ -90,6 +91,53 @@ async function connectToWhatsApp() {
             await sock.sendMessage(selfJid, { 
                 text: '✅ *WhatsApp Bridge Service Connected!*\n\nGroup support and enhanced error handling are now active.' 
             });
+        }
+    });
+
+    /**
+     * Webhook Hook: Incoming Messages
+     */
+    sock.ev.on('messages.upsert', async (m) => {
+        if (m.type !== 'notify') return;
+        for (const msg of m.messages) {
+            if (msg.key.fromMe) continue; // Skip our own outbound status messages
+            
+            logger.info({ from: msg.key.remoteJid }, 'Incoming message received');
+            notifyWebhook('message.received', {
+                id: msg.key.id,
+                remoteJid: msg.key.remoteJid,
+                pushName: msg.pushName,
+                message: msg.message,
+                timestamp: msg.messageTimestamp
+            });
+        }
+    });
+
+    /**
+     * Webhook Hook: Delivery Receipts & Status Updates
+     */
+    sock.ev.on('messages.update', async (updates) => {
+        for (const update of updates) {
+            if (update.update.status) {
+                const statusMap = { 1: 'Pending', 2: 'Sent', 3: 'Delivered', 4: 'Read', 5: 'Played' };
+                const humanStatus = statusMap[update.update.status] || 'Unknown';
+                
+                logger.info({ id: update.key.id, status: humanStatus }, 'Delivery status updated');
+                
+                // Update Local Audit Log
+                const db = await getDatabase();
+                db.run(
+                    `UPDATE audit_logs SET status = ? WHERE whatsapp_id = ?`, 
+                    [humanStatus, update.key.id]
+                );
+
+                notifyWebhook('message.status', {
+                    id: update.key.id,
+                    status: humanStatus,
+                    rawStatus: update.update.status,
+                    remoteJid: update.key.remoteJid
+                });
+            }
         }
     });
 
@@ -168,12 +216,16 @@ async function sendBatch(recipient, items, logId) {
                 default: continue;
             }
 
-            await sock.sendMessage(jid, messagePayload);
+            const sentMsg = await sock.sendMessage(jid, messagePayload);
+            
+            // Store the WhatsApp ID for the first message in the batch as the reference
+            if (sentMsg && logId) {
+                db.run(`UPDATE audit_logs SET status = ?, whatsapp_id = ? WHERE id = ?`, ['Sent', sentMsg.key.id, logId]);
+            }
+
             const delay = Math.floor(Math.random() * 700) + 800;
             await new Promise(resolve => setTimeout(resolve, delay));
         }
-
-        if (logId) db.run(`UPDATE audit_logs SET status = ? WHERE id = ?`, ['Sent', logId]);
     } catch (err) {
         logger.error(`Dispatch Failed for ${recipient}:`, err);
         if (logId) db.run(`UPDATE audit_logs SET status = ?, error = ? WHERE id = ?`, ['Failed', err.message, logId]);
