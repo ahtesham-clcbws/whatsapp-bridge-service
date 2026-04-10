@@ -1,4 +1,4 @@
-# 🚀 WhatsApp Bridge Service (v2.4.0)
+# 🚀 WhatsApp Bridge Service (v3.0.0)
 
 A generic, headless, and modular **WhatsApp-to-HTTP Bridge** designed for reliable automated messaging. Built with Node.js and the Baileys library, this service provides a high-level API to dispatch text and media messages to individuals and groups with enterprise-grade stability.
 

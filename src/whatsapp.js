@@ -1,5 +1,5 @@
 /**
- * WhatsApp Bridge Service - Core Handler [v2.0]
+ * WhatsApp Bridge Service - Core Handler [v3.0.0]
  * --------------------------------------------
  * Manages Baileys socket lifecycle, authentication, and multi-recipient dispatch.
  */

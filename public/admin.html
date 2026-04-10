@@ -3,111 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Bridge | Admin Control</title>
+    <title>WhatsApp Bridge | Admin Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0d0d0d; color: white; }
-        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        body { font-family: 'Inter', sans-serif; background-color: #0d0d0d; color: white; -webkit-font-smoothing: antialiased; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
         .wa-accent { color: #25d366; }
         .wa-bg { background-color: #25d366; }
-        .stat-card { transition: all 0.3s ease; }
-        .stat-card:hover { transform: translateY(-4px); background: rgba(255, 255, 255, 0.05); }
-        .btn-action { transition: all 0.2s; }
-        .btn-action:active { transform: scale(0.95); }
+        .wa-bg:hover { background-color: #1eb954; }
+        .stat-card { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .stat-card:hover { transform: scale(1.02); background: rgba(255, 255, 255, 0.06); }
+        .tab-active { border-bottom: 2px solid #25d366; color: #25d366; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .progress-bar { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+        .progress-fill { height: 100%; transition: width 0.5s ease; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeIn 0.4s ease forwards; }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
+<body class="min-h-screen p-4 md:p-8 lg:p-12">
 
-    <!-- Top Navigation -->
-    <nav class="flex items-center justify-between mb-12">
+    <!-- Header Section -->
+    <header class="max-w-7xl mx-auto flex items-center justify-between mb-10">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight">Bridge <span class="wa-accent">v3.0</span></h1>
-            <p id="uptimeDisplay" class="text-xs text-gray-500 uppercase tracking-widest mt-1">Uptime: --:--:--</p>
+            <h1 class="text-3xl font-bold tracking-tight">Bridge <span class="wa-accent">Command Center</span></h1>
+            <div class="flex items-center gap-4 mt-2">
+                <p id="uptimeDisplay" class="text-[10px] text-gray-500 uppercase tracking-widest">Uptime: --:--:--</p>
+                <div id="vitalsBox" class="flex gap-4 items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-500 uppercase tracking-widest">CPU:</span>
+                        <div class="w-16 progress-bar"><div id="cpuFill" class="progress-fill wa-bg" style="width: 0%"></div></div>
+                        <span id="cpuText" class="text-[10px] text-gray-400 font-mono">0.00</span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="flex gap-4">
-            <button onclick="logout()" class="glass px-5 py-2 rounded-full text-sm font-semibold hover:bg-white/10 transition-colors">Logout</button>
+        <div class="flex gap-3">
+            <button onclick="logout()" class="glass px-6 py-2.5 rounded-full text-xs font-bold hover:bg-white/10 transition-all">SIGN OUT</button>
         </div>
-    </nav>
+    </header>
 
-    <div class="max-w-7xl mx-auto space-y-8">
+    <!-- Navigation Hub -->
+    <div class="max-w-7xl mx-auto mb-10 border-b border-white/5 flex gap-10 overflow-x-auto no-scrollbar">
+        <button onclick="switchTab('telemetry')" id="tab-telemetry" class="pb-5 px-1 text-xs font-black uppercase tracking-[0.2em] transition-all tab-active">Telemetry</button>
+        <button onclick="switchTab('orchestrator')" id="tab-orchestrator" class="pb-5 px-1 text-xs font-black uppercase tracking-[0.2em] text-gray-500 transition-all">Orchestrator</button>
+        <button onclick="switchTab('directory')" id="tab-directory" class="pb-5 px-1 text-xs font-black uppercase tracking-[0.2em] text-gray-500 transition-all">Directory</button>
+        <button onclick="switchTab('vault')" id="tab-vault" class="pb-5 px-1 text-xs font-black uppercase tracking-[0.2em] text-gray-500 transition-all">Vault</button>
+        <button onclick="switchTab('settings')" id="tab-settings" class="pb-5 px-1 text-xs font-black uppercase tracking-[0.2em] text-gray-500 transition-all">Settings</button>
+    </div>
+
+    <main class="max-w-7xl mx-auto">
         
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div class="glass p-6 rounded-3xl stat-card">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Total Dispatched</p>
-                <h3 id="statTotal" class="text-4xl font-bold">0</h3>
-            </div>
-            <div class="glass p-6 rounded-3xl stat-card border-l-4 border-l-green-500/30">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Success</p>
-                <h3 id="statSuccess" class="text-4xl font-bold text-green-400">0</h3>
-            </div>
-            <div class="glass p-6 rounded-3xl stat-card border-l-4 border-l-red-500/30">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Failures</p>
-                <h3 id="statFailed" class="text-4xl font-bold text-red-500">0</h3>
-            </div>
-            <div class="glass p-6 rounded-3xl stat-card border-l-4 border-l-blue-500/30">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Retries</p>
-                <h3 id="statRetries" class="text-4xl font-bold text-blue-400">0</h3>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- Session Monitor -->
-            <div class="lg:col-span-2 glass p-8 rounded-[2rem] space-y-8">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-bold">Session Orchestrator</h2>
-                    <div id="connStatus" class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 text-xs font-bold uppercase tracking-wider">
-                        <div class="w-2 h-2 rounded-full bg-red-400 animate-pulse"></div>
-                        Disconnected
-                    </div>
+        <!-- PANE: TELEMETRY (MASTER STATUS) -->
+        <div id="pane-telemetry" class="tab-pane active animate-in space-y-10">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <!-- Status Cards -->
+                <div class="glass p-8 rounded-[2rem] stat-card">
+                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Total Load</p>
+                    <h3 id="statTotal" class="text-4xl font-bold">0</h3>
                 </div>
-
-                <!-- Connect UI (Hidden when connected) -->
-                <div id="connectUI" class="p-12 border-2 border-dashed border-white/5 rounded-3xl text-center space-y-6">
-                    <div class="mx-auto w-20 h-20 wa-bg/10 rounded-full flex items-center justify-center">
-                        <svg class="w-10 h-10 wa-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                    </div>
-                    <div class="space-y-2">
-                        <h4 class="text-lg font-semibold">Ready to Link?</h4>
-                        <p class="text-sm text-gray-500">Scan QR or use Pairing Code to start bridging.</p>
-                    </div>
-                    <div class="flex gap-4 justify-center">
-                        <button onclick="fetchQR()" class="wa-bg px-8 py-3 rounded-xl text-black font-bold btn-action">Generate QR</button>
-                        <button onclick="promptPairing()" class="glass px-8 py-3 rounded-xl font-bold hover:bg-white/10 btn-action">Pairing Code</button>
-                    </div>
-                    <div id="qrContainer" class="hidden mx-auto p-4 bg-white rounded-2xl w-max shadow-2xl">
-                         <div id="qrcode"></div>
-                    </div>
+                <div class="glass p-8 rounded-[2rem] stat-card border-b-4 border-b-green-500/50">
+                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Success Rate</p>
+                    <h3 id="statSuccess" class="text-4xl font-bold text-green-400">0</h3>
                 </div>
+                <div class="glass p-8 rounded-[2rem] stat-card border-b-4 border-b-red-500/50">
+                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Failure Log</p>
+                    <h3 id="statFailed" class="text-4xl font-bold text-red-500">0</h3>
+                </div>
+                <div class="glass p-8 rounded-[2rem] stat-card border-b-4 border-b-blue-500/50">
+                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Active Retries</p>
+                    <h3 id="statRetries" class="text-4xl font-bold text-blue-400">0</h3>
+                </div>
+            </div>
 
-                <!-- Active Control (Shown when connected) -->
-                <div id="activeUI" class="hidden p-8 bg-green-900/10 border border-green-500/20 rounded-3xl">
-                    <div class="flex items-center gap-6">
-                        <div class="w-16 h-16 wa-bg rounded-2xl flex items-center justify-center text-black">
-                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12.036 3.913a.75.75 0 01.747.647L12.87 5.25v2.25a.75.75 0 01-1.493.102l-.007-.102V5.25a.75.75 0 01.667-.743l.1-.007zm6.364 1.252a.75.75 0 01.102 1.05l-.068.082-1.59 1.59a.75.75 0 01-1.132-1.05l.07-.082 1.589-1.59a.75.75 0 011.03-.06zm-12.8 0a.75.75 0 011.06 0l1.59 1.59a.75.75 0 11-1.06 1.06l-1.59-1.59a.75.75 0 010-1.06zm14.313 6.335a.75.75 0 01.102 1.493l-.102.007h-2.25a.75.75 0 01-.102-1.493l.102-.007h2.25zM4.14 12.5a.75.75 0 01.102-1.493l-.102-.007h-2.25a.75.75 0 01-.102 1.493l.102-.007h2.25zM17.27 15.63a.75.75 0 011.05.102l.068.082 1.59 1.59a.75.75 0 01-1.05 1.132l-.082-.07-1.59-1.589a.75.75 0 01.102-1.06zm-10.54 0a.75.75 0 011.06 1.06l-1.59 1.59a.75.75 0 11-1.06-1.06l1.59-1.59zM12.87 18.75a.75.75 0 011.493.102l.007.102v2.246a.75.75 0 01-1.493-.102l-.007-.102V18.75z"/></svg>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                <!-- Session Manager -->
+                <div class="lg:col-span-2 glass p-10 rounded-[2.5rem] space-y-8">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-2xl font-bold">Session Lifecycle</h2>
+                        <div id="connStatus" class="flex items-center gap-3 px-5 py-2 rounded-full bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-widest">
+                            <div class="w-2 h-2 rounded-full bg-red-500 animate-ping"></div>
+                            Disconnected
+                        </div>
+                    </div>
+                    
+                    <div id="connectUI" class="p-16 border-4 border-dashed border-white/5 rounded-[2rem] text-center space-y-8">
+                        <div class="mx-auto w-24 h-24 wa-bg/10 rounded-3xl flex items-center justify-center">
+                            <svg class="w-12 h-12 wa-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-bold">Unlinked Instance</h4>
+                            <p class="text-gray-500 mt-1 text-sm">Deploy a new WhatsApp bridge session below.</p>
+                        </div>
+                        <div class="flex gap-4 justify-center">
+                            <button onclick="fetchQR()" class="wa-bg px-10 py-4 rounded-2xl text-black font-black text-sm btn-action">Generate QR</button>
+                            <button onclick="promptPairing()" class="glass px-10 py-4 rounded-2xl font-black text-sm hover:bg-white/10 btn-action">8-Digit Pair</button>
+                        </div>
+                        <div id="qrContainer" class="hidden mx-auto p-6 bg-white rounded-3xl w-max shadow-2xl">
+                             <div id="qrcode"></div>
+                        </div>
+                    </div>
+
+                    <div id="activeUI" class="hidden p-10 bg-green-500/5 border border-green-500/20 rounded-[2rem] flex items-center gap-10">
+                        <div class="w-20 h-20 wa-bg rounded-3xl flex items-center justify-center text-black shadow-lg shadow-green-500/20">
+                            <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                         </div>
                         <div class="flex-1">
-                            <h4 class="font-bold text-lg">System Active</h4>
-                            <p class="text-sm text-gray-400">Dispatch engine is primed and listening for triggers.</p>
+                            <h4 class="text-2xl font-bold">Bridge Active</h4>
+                            <p class="text-gray-400 text-sm mt-1">Ready to receive and dispatch messages across the network.</p>
                         </div>
-                        <button onclick="disconnect()" class="bg-red-500/20 text-red-400 px-6 py-2.5 rounded-xl font-bold hover:bg-red-500/30 transition-all btn-action">Disconnect</button>
+                        <button onclick="disconnect()" class="bg-red-500/20 text-red-400 px-8 py-3 rounded-2xl font-black text-sm hover:bg-red-500/30">Destroy Session</button>
+                    </div>
+                </div>
+
+                <!-- Event Log Stream -->
+                <div class="glass p-10 rounded-[2.5rem]">
+                    <h2 class="text-2xl font-bold mb-8">Event Pulse</h2>
+                    <div id="logList" class="space-y-4 max-h-[500px] overflow-y-auto pr-3">
+                        <p class="text-gray-600 text-sm italic">Synchronizing logs...</p>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Recent Stream -->
-            <div class="glass p-8 rounded-[2rem]">
-                <h2 class="text-xl font-bold mb-6">Recent Activity</h2>
-                <div id="logList" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                    <!-- Logs injected here -->
-                    <p class="text-gray-600 text-sm italic">Polling audit engine...</p>
+        <!-- PANE: ORCHESTRATOR (DISPATCH) -->
+        <div id="pane-orchestrator" class="tab-pane animate-in space-y-10 max-w-4xl mx-auto">
+            <div class="glass p-12 rounded-[2.5rem] shadow-2xl">
+                <h2 class="text-3xl font-bold mb-8">Fire Dispatch Pulse</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div class="space-y-3">
+                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Recipient Identity</label>
+                        <input type="text" id="sendNumber" placeholder="Number or JID" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl outline-none focus:border-green-500 transition-all font-mono text-sm">
+                    </div>
+                    <div class="space-y-3">
+                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Payload Category</label>
+                        <select id="sendType" class="w-full bg-[#1a1a1a] border border-white/10 p-5 rounded-2xl outline-none focus:border-green-500 transition-all text-sm font-bold appearance-none">
+                            <option value="text">TEXT MESSAGE</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="space-y-3 mb-8">
+                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Message Content</label>
+                    <textarea id="sendText" rows="6" placeholder="Enter your payload content here..." class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl outline-none focus:border-green-500 transition-all text-sm"></textarea>
+                </div>
+                <button id="dispatchBtn" onclick="performDispatch()" class="wa-bg w-full py-5 rounded-2xl text-black font-black tracking-widest uppercase transition-all shadow-xl shadow-green-500/10">Fire Message</button>
+                <div id="dispatchMsg" class="mt-6 text-center text-sm font-bold italic"></div>
+            </div>
+        </div>
+
+        <!-- PANE: DIRECTORY (GROUPS) -->
+        <div id="pane-directory" class="tab-pane animate-in space-y-10">
+            <div class="glass p-12 rounded-[2.5rem]">
+                <div class="flex items-center justify-between mb-10">
+                    <h2 class="text-3xl font-bold">Group Directory</h2>
+                    <button onclick="fetchGroups()" class="glass px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Manual Sync</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-[10px] text-gray-500 uppercase tracking-widest border-b border-white/5">
+                                <th class="pb-6">Group Subject</th>
+                                <th class="pb-6">JID Identity</th>
+                                <th class="pb-6">Users</th>
+                                <th class="pb-6 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="groupTableBody" class="text-sm">
+                            <!-- Injected -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    </div>
+
+        <!-- PANE: VAULT (TEMPLATES) -->
+        <div id="pane-vault" class="tab-pane animate-in space-y-10 max-w-4xl mx-auto">
+            <div class="glass p-12 rounded-[2.5rem]">
+                <h2 class="text-3xl font-bold mb-8">Template Vault</h2>
+                <div class="flex gap-4 mb-10">
+                    <input type="text" id="tplName" placeholder="Template Name" class="flex-1 bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-green-500 transition-all text-sm font-mono">
+                    <button onclick="saveTemplate()" class="wa-bg px-8 py-4 rounded-xl text-black font-black text-xs uppercase tracking-widest">Secure Entry</button>
+                </div>
+                <div id="tplList" class="space-y-4">
+                    <!-- Templates -->
+                </div>
+            </div>
+        </div>
+
+        <!-- PANE: SETTINGS -->
+        <div id="pane-settings" class="tab-pane animate-in space-y-10 max-w-4xl mx-auto">
+            <div class="glass p-12 rounded-[2.5rem]">
+                <h2 class="text-3xl font-bold mb-8">Global Config</h2>
+                <div id="configGrid" class="space-y-6">
+                    <div class="p-6 bg-white/5 rounded-2xl flex justify-between items-center">
+                        <div><p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Webhook Callback</p><h4 id="confWebhook" class="font-mono text-sm mt-1">--</h4></div>
+                        <span class="text-xs wa-accent font-bold">READ ONLY (ENV)</span>
+                    </div>
+                    <div class="p-6 bg-white/5 rounded-2xl flex justify-between items-center">
+                        <div><p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Retry Policy</p><h4 id="confRetry" class="font-mono text-sm mt-1">--</h4></div>
+                        <span class="text-xs wa-accent font-bold">READ ONLY (ENV)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
 
     <script>
         const token = localStorage.getItem('adminToken');
@@ -115,6 +224,7 @@
 
         let qrInstance = null;
 
+        // --- Core Fetcher ---
         async function api(path, method = 'GET', body = null) {
             const options = {
                 method,
@@ -126,6 +236,23 @@
             return res.json();
         }
 
+        // --- Tab Management ---
+        function switchTab(id) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.remove('tab-active', 'text-white'));
+            document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.add('text-gray-500'));
+            
+            document.getElementById(`pane-${id}`).classList.add('active');
+            const tab = document.getElementById(`tab-${id}`);
+            tab.classList.add('tab-active', 'text-white');
+            tab.classList.remove('text-gray-500');
+
+            if (id === 'directory') fetchGroups();
+            if (id === 'vault') renderTemplates();
+            if (id === 'settings') fetchConfig();
+        }
+
+        // --- Telemetry & Vitals ---
         async function refreshStats() {
             const data = await api('/api/admin/stats');
             if (data.status === 'success') {
@@ -134,38 +261,137 @@
                 document.getElementById('statFailed').innerText = data.metrics.failure_count;
                 document.getElementById('statRetries').innerText = data.metrics.retry_volume;
                 
+                document.getElementById('cpuFill').style.width = `${Math.min(data.vitals.cpu_load * 20, 100)}%`;
+                document.getElementById('cpuText').innerText = data.vitals.cpu_load;
+
                 const up = data.vitals.uptime;
                 const h = Math.floor(up / 3600);
                 const m = Math.floor((up % 3600) / 60);
                 const s = up % 60;
                 document.getElementById('uptimeDisplay').innerText = `Uptime: ${h}h ${m}m ${s}s`;
 
-                // Connection Switch
                 const statusDiv = document.getElementById('connStatus');
                 if (data.vitals.connected) {
-                    statusDiv.innerHTML = '<div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div> Connected';
-                    statusDiv.className = 'flex items-center gap-2 px-4 py-1.5 rounded-full bg-green-500/10 text-green-400 text-xs font-bold uppercase tracking-wider';
+                    statusDiv.innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></div> Connected';
+                    statusDiv.className = 'flex items-center gap-2 px-5 py-2 rounded-full bg-green-500/10 text-green-400 text-[10px] font-black uppercase tracking-widest';
                     document.getElementById('activeUI').classList.remove('hidden');
                     document.getElementById('connectUI').classList.add('hidden');
                 } else {
-                    statusDiv.innerHTML = '<div class="w-2 h-2 rounded-full bg-red-400 animate-pulse"></div> Disconnected';
-                    statusDiv.className = 'flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 text-xs font-bold uppercase tracking-wider';
+                    statusDiv.innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></div> Disconnected';
+                    statusDiv.className = 'flex items-center gap-2 px-5 py-2 rounded-full bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-widest';
                     document.getElementById('activeUI').classList.add('hidden');
                     document.getElementById('connectUI').classList.remove('hidden');
                 }
             }
         }
 
+        // --- Configuration ---
+        async function fetchConfig() {
+            const data = await api('/api/admin/settings');
+            document.getElementById('confWebhook').innerText = data.webhook_url;
+            document.getElementById('confRetry').innerText = `${data.max_retries} Attempts`;
+        }
+
+        // --- Group Directory ---
+        async function fetchGroups() {
+            const tbody = document.getElementById('groupTableBody');
+            tbody.innerHTML = '<tr><td colspan="4" class="py-12 text-center text-gray-600 font-bold italic tracking-widest">Mapping Bridge Network...</td></tr>';
+            
+            try {
+                const groups = await api('/session/groups');
+                tbody.innerHTML = groups.map(g => `
+                    <tr class="border-b border-white/5 group hover:bg-white/5 transition-all">
+                        <td class="py-7 font-black truncate max-w-[200px]">${g.subject}</td>
+                        <td class="py-7 font-mono text-[11px] text-gray-500 select-all">${g.id}</td>
+                        <td class="py-7 font-bold text-gray-400 tracking-wider">${g.participants} UID</td>
+                        <td class="py-7 text-right">
+                            <button onclick="useRecipient('${g.id}')" class="text-[10px] font-black wa-accent border border-green-500/30 px-4 py-1.5 rounded-lg hover:bg-green-500/10 transition-all uppercase tracking-widest">Link</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="4" class="py-12 text-center text-red-400 font-black">Bridge Offline. Sync Failure.</td></tr>';
+            }
+        }
+
+        function useRecipient(jid) { document.getElementById('sendNumber').value = jid; switchTab('orchestrator'); }
+
+        // --- Orchestrator ---
+        async function performDispatch() {
+            const num = document.getElementById('sendNumber').value;
+            const text = document.getElementById('sendText').value;
+            const btn = document.getElementById('dispatchBtn');
+            const msg = document.getElementById('dispatchMsg');
+
+            if (!num || !text) return;
+            btn.disabled = true; btn.innerText = 'ILLUMINATING PULSE...';
+
+            try {
+                const data = await api('/send', 'POST', { number: num, type: 'text', text: text });
+                if (data.status === 'success') {
+                    msg.innerText = 'PULSE SUCCESSFUL'; msg.className = 'mt-6 text-center text-sm text-green-400 font-black tracking-widest';
+                    document.getElementById('sendText').value = '';
+                } else {
+                    msg.innerText = data.error || 'PULSE DAMPENED'; msg.className = 'mt-6 text-center text-sm text-red-400 font-black tracking-widest';
+                }
+            } catch (e) {
+                msg.innerText = 'LINK FAILURE';
+            } finally {
+                setTimeout(() => { btn.disabled = false; btn.innerText = 'FIRE MESSAGE'; }, 1000);
+            }
+        }
+
+        // --- Vault (LocalStorage Templates) ---
+        function saveTemplate() {
+            const name = document.getElementById('tplName').value;
+            const text = document.getElementById('sendText').value;
+            if (!name || !text) return alert("Fill Name and Message Content");
+            const tpls = JSON.parse(localStorage.getItem('waTpls') || '[]');
+            tpls.push({ name, text });
+            localStorage.setItem('waTpls', JSON.stringify(tpls));
+            document.getElementById('tplName').value = '';
+            renderTemplates();
+        }
+
+        function renderTemplates() {
+            const list = document.getElementById('tplList');
+            const tpls = JSON.parse(localStorage.getItem('waTpls') || '[]');
+            if (tpls.length === 0) return list.innerHTML = '<p class="text-gray-600 text-center italic">Vault is currently empty.</p>';
+            list.innerHTML = tpls.map((t, i) => `
+                <div class="p-6 glass rounded-2xl flex items-center justify-between group">
+                    <div><h4 class="font-bold text-sm wa-accent">${t.name}</h4><p class="text-xs text-gray-500 mt-1 truncate max-w-[400px]">${t.text}</p></div>
+                    <div class="flex gap-3">
+                        <button onclick="applyTpl(${i})" class="text-[10px] font-black uppercase tracking-widest wa-accent">Load</button>
+                        <button onclick="delTpl(${i})" class="text-[10px] font-black uppercase tracking-widest text-red-500">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function applyTpl(i) {
+            const tpls = JSON.parse(localStorage.getItem('waTpls') || '[]');
+            document.getElementById('sendText').value = tpls[i].text;
+            switchTab('orchestrator');
+        }
+
+        function delTpl(i) {
+            const tpls = JSON.parse(localStorage.getItem('waTpls') || '[]');
+            tpls.splice(i, 1);
+            localStorage.setItem('waTpls', JSON.stringify(tpls));
+            renderTemplates();
+        }
+
+        // --- Telemetry Logging ---
         async function fetchLogs() {
             const logs = await api('/logs');
             const list = document.getElementById('logList');
             list.innerHTML = logs.map(l => `
-                <div class="p-3 bg-white/5 rounded-xl text-xs space-y-1">
-                    <div class="flex justify-between font-bold">
-                        <span class="text-gray-400">${l.recipient}</span>
-                        <span class="${l.status === 'Sent' || l.status === 'Read' ? 'text-green-400' : 'text-red-400'}">${l.status}</span>
+                <div class="p-4 bg-white/5 rounded-2xl text-[10px] space-y-1 mb-3 hover:bg-white/10 transition-all">
+                    <div class="flex justify-between font-black uppercase tracking-widest">
+                        <span class="text-gray-500">${l.recipient}</span>
+                        <span class="${l.status === 'Sent' || l.status === 'Read' || l.status === 'Delivered' ? 'text-green-400' : 'text-red-400'}">${l.status}</span>
                     </div>
-                    <div class="text-[10px] text-gray-500">${new Date(l.created_at).toLocaleString()} | ID: ${l.whatsapp_id || 'N/A'}</div>
+                    <div class="text-[10px] text-gray-600 font-mono">${new Date(l.created_at).toLocaleString()}</div>
                 </div>
             `).join('');
         }
@@ -174,41 +400,24 @@
             const data = await api('/session/qr');
             if (data.qr) {
                 document.getElementById('qrContainer').classList.remove('hidden');
-                const container = document.getElementById('qrcode');
-                container.innerHTML = ''; // Clear previous
-                
-                qrInstance = new QRCode(container, {
-                    text: data.qr,
-                    width: 256,
-                    height: 256,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
+                document.getElementById('qrcode').innerHTML = '';
+                new QRCode(document.getElementById('qrcode'), { text: data.qr, width: 200, height: 200 });
             }
         }
 
         async function promptPairing() {
-            const num = prompt("Enter phone number with country code (e.g. 91xxxxxxxxxx):");
+            const num = prompt("E.164 Number (e.g. 91xxxxxxxxxx):");
             if (num) {
                 const data = await api('/session/pairing-code', 'POST', { number: num });
-                if (data.code) {
-                    alert(`Your WhatsApp Pairing Code is: ${data.code}\n\nGo to WhatsApp > Linked Devices > Link with Phone Number to enter this.`);
-                }
+                if (data.code) alert(`Pairing Code: ${data.code}`);
             }
         }
 
         async function disconnect() {
-            if (confirm("Disconnect and wipe current session?")) {
-                const data = await api('/session/logout', 'POST');
-                if (data.status === 'success') location.reload();
-            }
+            if (confirm("Disconnect session?")) { await api('/session/logout', 'POST'); location.reload(); }
         }
 
-        function logout() {
-            localStorage.removeItem('adminToken');
-            window.location.href = '/dashboard/';
-        }
+        function logout() { localStorage.removeItem('adminToken'); window.location.href = '/dashboard/'; }
 
         setInterval(refreshStats, 3000);
         setInterval(fetchLogs, 5000);

@@ -45,6 +45,7 @@ app.use(express.json({ type: () => true }));
 
 // --- v3.0 Static Dashboard Engine ---
 app.use('/dashboard', express.static(path.join(__dirname, '..', 'public')));
+app.get('/dashboard/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
 
 /**
  * Flexible Authorization Middleware: Accepts either a valid API_KEY 
@@ -196,25 +197,17 @@ app.post('/session/logout', flexibleAuth, async (req, res) => {
 });
 
 /**
- * Admin Telemetry
+ * Admin Telemetry + System Vitals
  * GET /api/admin/stats
  */
 app.get('/api/admin/stats', flexibleAuth, async (req, res) => {
     try {
         const db = await getDatabase();
+        const os = require('os');
         
-        // Fetch raw counts from audit_logs
         const stats = await new Promise((resolve, reject) => {
-            db.all(`
-                SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN status = 'Sent' OR status = 'Read' OR status = 'Delivered' THEN 1 ELSE 0 END) as success,
-                    SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) as failed,
-                    SUM(retry_count) as retries
-                FROM audit_logs
-            `, [], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows[0]);
+            db.all(`SELECT COUNT(*) as total, SUM(CASE WHEN status IN ('Sent','Read','Delivered') THEN 1 ELSE 0 END) as success, SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) as failed, SUM(retry_count) as retries FROM audit_logs`, [], (err, rows) => {
+                if (err) reject(err); else resolve(rows[0]);
             });
         });
 
@@ -223,6 +216,8 @@ app.get('/api/admin/stats', flexibleAuth, async (req, res) => {
             vitals: {
                 uptime: Math.floor(process.uptime()),
                 connected: isWhatsAppConnected(),
+                cpu_load: os.loadavg()[0].toFixed(2),
+                ram_usage: ((1 - os.freemem() / os.totalmem()) * 100).toFixed(0),
                 version: '3.0.0'
             },
             metrics: {
@@ -234,8 +229,20 @@ app.get('/api/admin/stats', flexibleAuth, async (req, res) => {
         });
     } catch (err) {
         logger.error('Stats Error:', err);
-        res.status(500).json({ error: 'Failed to retrieve telemetry.' });
+        res.status(500).json({ error: 'Telemetry Failure.' });
     }
+});
+
+/**
+ * Dynamic Configuration Management
+ * GET /api/admin/settings
+ */
+app.get('/api/admin/settings', flexibleAuth, (req, res) => {
+    res.json({
+        webhook_url: process.env.WEBHOOK_URL || 'Not Set',
+        max_retries: process.env.MAX_RETRIES || 3,
+        file_limit: process.env.MAX_FILE_SIZE || '50MB'
+    });
 });
 
 /**
