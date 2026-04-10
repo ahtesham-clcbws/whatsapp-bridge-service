@@ -1,0 +1,22 @@
+[
+    {
+        "name": "🚀 System Activation",
+        "text": "Hello! The WhatsApp Bridge Service v3.0.0-PRO has been successfully initialized. All systems are operational and secure."
+    },
+    {
+        "name": "🔐 Security Protocol",
+        "text": "SECURITY ALERT: A new administrative login has been recorded for this bridge instance. If this was not you, please audit your session immediately."
+    },
+    {
+        "name": "🔍 Heartbeat Sync",
+        "text": "V3 DIAGNOSTIC: Heartbeat puls received. Signal strength optimal. Connectivity confirmed."
+    },
+    {
+        "name": "📢 Global Broadcast",
+        "text": "ATTENTION: This is a system-wide broadcast notification sent via the Bridge Command Center directory."
+    },
+    {
+        "name": "⏱️ Maintenance Alert",
+        "text": "SCHEDULED MAINTENANCE: The bridge will undergo a brief software optimization in 15 minutes. Connectivity may pulse momentarily."
+    }
+]

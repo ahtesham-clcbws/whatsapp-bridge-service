@@ -234,6 +234,18 @@ app.get('/api/admin/stats', flexibleAuth, async (req, res) => {
 });
 
 /**
+ * Global Template Directory
+ * GET /api/admin/templates
+ */
+app.get('/api/admin/templates', flexibleAuth, (req, res) => {
+    try {
+        const templates = require('./templates.json');
+        res.json(templates);
+    } catch (e) {
+        res.json([]);
+    }
+});
+/**
  * Dynamic Configuration Management
  * GET /api/admin/settings
  */
