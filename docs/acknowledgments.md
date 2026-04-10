@@ -31,8 +31,9 @@ The bridge is powered by a curated selection of elite open-source technologies:
 ---
 
 ## 🙏 Special Thanks
+We would also like to thank the countless contributors to the open-source community. Your hard work and dedication drive innovation and make projects like WhatsApp Bridge System possible.
+
 - To the **WhiskeySockets Community** for maintaining the core Baileys library.
-- To all open-source contributors whose libraries made this bridge possible.
 - **Thanks to Google DeepMind** for the Antigravity AI that made this collaboration possible.
 
 *Together, we build tools that connect the world.*
