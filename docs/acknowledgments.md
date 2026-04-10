@@ -1,5 +1,7 @@
 # 🤝 Acknowledgments
 
+**WhatsApp Bridge Service** is built on the shoulders of giants. We gratefully acknowledge the following open-source projects, technologies, and communities that made this platform possible.
+
 This project is the result of a collaborative partnership between human architectural vision and advanced artificial intelligence.
 
 ## 👨‍💻 Lead Architect

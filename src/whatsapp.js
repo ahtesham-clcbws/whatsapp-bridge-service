@@ -182,7 +182,7 @@ async function logoutSession() {
 }
 
 /**
- * Dispatches a sequence of messages to a JID (Individual or Group).
+ * Dispatches a sequence of messages to a JID (Individual or Group) with retry logic.
  * @param {string} recipient - Phone number or Group JID (@g.us).
  * @param {BatchItem[]} items - Payload sequence.
  * @param {number} logId - Audit log reference.
@@ -190,44 +190,59 @@ async function logoutSession() {
 async function sendBatch(recipient, items, logId) {
     if (!isConnected) throw new Error('WhatsApp not connected');
 
-    // Smart JID resolution: Support both numbers and group JIDs
     const jid = recipient.includes('@') ? recipient : `${recipient.replace(/\D/g, '')}@s.whatsapp.net`;
     const db = await getDatabase();
+    const maxRetries = parseInt(process.env.MAX_RETRIES) || 3;
+    const retryDelays = [5000, 15000, 60000]; // 5s, 15s, 60s
 
     try {
         for (const item of items) {
             let messagePayload = {};
             
             switch (item.type) {
-                case 'text':
-                    messagePayload = { text: item.text };
-                    break;
-                case 'image':
-                    messagePayload = { image: item.buffer, caption: item.text };
-                    break;
-                case 'document':
-                    messagePayload = { 
-                        document: item.buffer, 
-                        mimetype: 'application/octet-stream', 
-                        fileName: item.filename || 'document',
-                        caption: item.text 
-                    };
-                    break;
+                case 'text': messagePayload = { text: item.text }; break;
+                case 'image': messagePayload = { image: item.buffer, caption: item.text }; break;
+                case 'document': messagePayload = { 
+                    document: item.buffer, 
+                    mimetype: 'application/octet-stream', 
+                    fileName: item.filename || 'document',
+                    caption: item.text 
+                }; break;
                 default: continue;
             }
 
-            const sentMsg = await sock.sendMessage(jid, messagePayload);
-            
-            // Store the WhatsApp ID for the first message in the batch as the reference
-            if (sentMsg && logId) {
-                db.run(`UPDATE audit_logs SET status = ?, whatsapp_id = ? WHERE id = ?`, ['Sent', sentMsg.key.id, logId]);
+            let attempt = 0;
+            let success = false;
+            let lastError = null;
+
+            while (attempt <= maxRetries && !success) {
+                try {
+                    const sentMsg = await sock.sendMessage(jid, messagePayload);
+                    success = true;
+                    
+                    if (sentMsg && logId) {
+                        db.run(`UPDATE audit_logs SET status = ?, whatsapp_id = ?, retry_count = ? WHERE id = ?`, 
+                            ['Sent', sentMsg.key.id, attempt, logId]);
+                    }
+                } catch (err) {
+                    lastError = err;
+                    attempt++;
+                    
+                    if (attempt <= maxRetries) {
+                        logger.warn({ recipient, attempt, error: err.message }, 'Dispatch failed, retrying...');
+                        if (logId) db.run(`UPDATE audit_logs SET retry_count = ? WHERE id = ?`, [attempt, logId]);
+                        await new Promise(resolve => setTimeout(resolve, retryDelays[attempt - 1] || 5000));
+                    }
+                }
             }
+
+            if (!success) throw lastError;
 
             const delay = Math.floor(Math.random() * 700) + 800;
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     } catch (err) {
-        logger.error(`Dispatch Failed for ${recipient}:`, err);
+        logger.error(`Dispatch Failed for ${recipient} after retries:`, err);
         if (logId) db.run(`UPDATE audit_logs SET status = ?, error = ? WHERE id = ?`, ['Failed', err.message, logId]);
     }
 }
