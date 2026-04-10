@@ -19,7 +19,7 @@ const {
     logoutSession,
     getAllGroups
 } = require('./whatsapp');
-const { getRecentLogs, getDatabase } = require('./database');
+const { getRecentLogs, getDatabase, getSystemDatabase } = require('./database');
 const pino = require('pino');
 require('dotenv').config();
 
@@ -29,8 +29,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 // --- Global State for v3.0 Admin Dashboard ---
-const otpMap = new Map(); // Stores { code, expires, ip }
-const sessions = new Set(); // Stores verified session tokens
+// Persistent v3.2: MFA & Sessions migrated to system.db
 const port = process.env.PORT || 3001;
 const apiKey = process.env.API_KEY;
 
@@ -51,13 +50,19 @@ app.get('/dashboard/admin', (req, res) => res.sendFile(path.join(__dirname, '..'
  * Flexible Authorization Middleware: Accepts either a valid API_KEY 
  * or a valid Dashboard Session Token.
  */
-const flexibleAuth = (req, res, next) => {
+const flexibleAuth = async (req, res, next) => {
     const providedKey = req.body?.apiKey || req.query.apiKey || req.headers['x-api-key'];
     const adminToken = req.headers['x-admin-token'];
 
-    // Check Dashboard Session First
-    if (adminToken && sessions.has(adminToken)) {
-        return next();
+    // Check Dashboard Session First (Persistent v3.2)
+    if (adminToken) {
+        const sysDb = await getSystemDatabase();
+        const session = await new Promise((resolve) => {
+            sysDb.get(`SELECT * FROM admin_sessions WHERE token = ? AND expires_at > CURRENT_TIMESTAMP`, [adminToken], (err, row) => {
+                if (err) resolve(null); else resolve(row);
+            });
+        });
+        if (session) return next();
     }
 
     // Fallback to API_KEY
@@ -89,12 +94,13 @@ app.post('/api/auth/request', async (req, res) => {
 
         // If connected, trigger WhatsApp OTP
         const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const tokenHash = crypto.randomUUID(); // Temporary token to track the verification attempt
+        const tokenHash = crypto.randomUUID();
+        const expires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
         
-        otpMap.set(tokenHash, { 
-            code, 
-            expires: Date.now() + 5 * 60 * 1000, // 5 min expiry
-            ip: req.ip 
+        const sysDb = await getSystemDatabase();
+        await new Promise((resolve, reject) => {
+            sysDb.run(`INSERT INTO auth_attempts (attempt_token, code, expires_at, ip) VALUES (?, ?, ?, ?)`, 
+                [tokenHash, code, expires, req.ip], (err) => err ? reject(err) : resolve());
         });
 
         await require('./whatsapp').sendAuthCode(code);
@@ -109,25 +115,28 @@ app.post('/api/auth/request', async (req, res) => {
  * Verify Dashboard OTP
  * POST /api/auth/verify
  */
-app.post('/api/auth/verify', (req, res) => {
+app.post('/api/auth/verify', async (req, res) => {
     const { attemptToken, code } = req.body;
-    const record = otpMap.get(attemptToken);
+    const sysDb = await getSystemDatabase();
 
-    if (!record || record.expires < Date.now()) {
-        otpMap.delete(attemptToken);
-        return res.status(401).json({ error: 'OTP expired or invalid.' });
+    const attempt = await new Promise((resolve) => {
+        sysDb.get(`SELECT * FROM auth_attempts WHERE attempt_token = ? AND code = ? AND expires_at > CURRENT_TIMESTAMP`, 
+            [attemptToken, code], (err, row) => resolve(row));
+    });
+
+    if (attempt) {
+        const sessionToken = crypto.randomUUID();
+        const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 day persistent session
+        
+        await new Promise((resolve) => {
+            sysDb.run(`INSERT INTO admin_sessions (token, expires_at) VALUES (?, ?)`, [sessionToken, expires], () => resolve());
+            sysDb.run(`DELETE FROM auth_attempts WHERE attempt_token = ?`, [attemptToken]);
+        });
+        
+        res.json({ status: 'success', token: sessionToken });
+    } else {
+        res.status(401).json({ error: 'Invalid or expired code.' });
     }
-
-    if (record.code !== code) {
-        return res.status(401).json({ error: 'Incorrect OTP code.' });
-    }
-
-    // Success: Generate Long-Lived Session Token
-    const sessionToken = crypto.randomUUID();
-    sessions.add(sessionToken);
-    otpMap.delete(attemptToken);
-
-    res.json({ status: 'success', token: sessionToken });
 });
 
 // --- Session Management Endpoints ---
@@ -188,6 +197,11 @@ app.get('/session/groups', flexibleAuth, async (req, res) => {
  */
 app.post('/session/logout', flexibleAuth, async (req, res) => {
     try {
+        const adminToken = req.headers['x-admin-token'];
+        if (adminToken) {
+            const sysDb = await getSystemDatabase();
+            await new Promise(r => sysDb.run(`DELETE FROM admin_sessions WHERE token = ?`, [adminToken], () => r()));
+        }
         await logoutSession();
         res.json({ status: 'success', message: 'Session disconnected and cleared.' });
     } catch (err) {

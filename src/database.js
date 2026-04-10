@@ -23,6 +23,33 @@ if (!fs.existsSync(logsDir)) {
 }
 
 /**
+ * Returns a connection to the permanent system database (for sessions, config, etc.)
+ * @returns {Promise<sqlite3.Database>}
+ */
+function getSystemDatabase() {
+    const dbPath = path.join(logsDir, `system.db`);
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3.Database(dbPath, (err) => {
+            if (err) return reject(err);
+            db.serialize(() => {
+                db.run(`CREATE TABLE IF NOT EXISTS admin_sessions (
+                    token TEXT PRIMARY KEY,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    expires_at DATETIME NOT NULL
+                )`);
+                db.run(`CREATE TABLE IF NOT EXISTS auth_attempts (
+                    attempt_token TEXT PRIMARY KEY,
+                    code TEXT NOT NULL,
+                    expires_at DATETIME NOT NULL,
+                    ip TEXT
+                )`);
+                resolve(db);
+            });
+        });
+    });
+}
+
+/**
  * Returns the current ISO week number and year.
  * Format: YYYY-WW (e.g., 2026-15)
  */
@@ -107,5 +134,6 @@ async function getRecentLogs(limit = 100) {
 
 module.exports = {
     getDatabase,
+    getSystemDatabase,
     getRecentLogs
 };
