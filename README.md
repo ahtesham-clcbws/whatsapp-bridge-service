@@ -4,36 +4,41 @@ A generic, headless, and modular **WhatsApp-to-HTTP Bridge** designed for reliab
 
 ---
 
-## ✨ Key Features
+## ✨ Current Feature Suite
 
 - `[x]` **Group & Individual Support**: Seamlessly message phone numbers or Group JIDs.
 - `[x]` **Multipart Media API**: High-performance endpoint for text, images, and documents.
-- `[x]` **Weekly SQLite Audit Logs**: High-efficiency database archiving.
-- `[x]` **Webhook Engine**: Real-time delivery receipts and incoming message callbacks.
-- `[x]` **Exponential Backoff Retry**: Automated recovery for temporary socket failures.
-- `[x]` **Automated Pre-Flight Testing**: One-command validation for API integrity.
-- `[x]` **API-based Log Access**: Secured `GET /logs` endpoint for history.
-- `[x]` **VitePress Documentation**: High-fidelity, versioned documentation system.
+- `[x]` **Webhook Engine**: Real-time delivery receipts (Sent → Delivered → Read) and incoming message callbacks.
+- `[x]` **Exponential Backoff Retry**: Automated recovery for temporary socket failures (v2.3.0).
+- `[x]` **Automated Pre-Flight Testing**: One-command validation suite (`tests/api_check.js`) for API integrity.
+- `[x]` **System Heartbeat**: Real-time stats, uptime, and versioning via `/health`.
+- `[x]` **Weekly SQLite Audit Logs**: High-efficiency database archiving with auto-migrations.
+- `[x]` **Headless-First Design**: Pure REST API consumed by any language (PHP, Laravel, React, etc.).
 
 ---
 
-## 🛠️ API & Documentation
+## 🗺️ Future Roadmap
 
-For full technical details, **[The Vision](/vision)**, authentication guides, and SDK examples, visit our official documentation site:
+### Phase 3: The Admin Era (v3.0)
+- **Interactive Admin Dashboard**: Lightweight, mobile-first UI for session management and log browsing.
+- **WhatsApp Native MFA**: Password-less security using dynamic OTPs sent to your own WhatsApp account.
+- **Template Engine**: support for dynamic variables (e.g., `Hello {{user}}`) for simplified batch marketing.
+
+### Phase 4: Enterprise Safety (v4.0)
+- **Intelligent Rate Limiting**: Throttling engine to mimic human typing and prevent account suspensions.
+- **Advanced Analytics**: Visual reporting on message delivery performance and success ratios.
+
+### Long-Term Vision
+- **Multi-Instance Support**: Manage multiple independent WhatsApp accounts from a single server.
+- **Multi-Tenant Permissions**: Granular API keys for different departments or clients.
+
+---
+
+## 🛠️ Documentation & Vision
+
+For full technical details, **[The Vision](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/vision)**, authentication guides, and SDK examples, visit our documentation portal:
 
 👉 **[Launch Documentation Portal](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/)**
-
----
-
-## ☁️ Deployment Guide
-
-Check our detailed **[Deployment Guide](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/deployment)** for step-by-step setup on Oracle Cloud, Hostinger, and more.
-
----
-
-## 🤝 Acknowledgements
-
-This project is built on the shoulders of giants. See our **[Acknowledgements](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/acknowledgments)** page for details on the authors and technologies involved.
 
 ---
 
@@ -44,4 +49,5 @@ Distributed under the **MIT License**.
 ---
 
 ### 👨‍💻 Developed by [Ahtesham](https://github.com/ahtesham-clcbws)
+*(Built in collaboration with Antigravity AI)*
 *Building modular tools for the modern developer.*
