@@ -5,6 +5,7 @@ export default {
   themeConfig: {
     nav: [
       { text: "Home", link: "/" },
+      { text: "The Vision", link: "/vision" },
       { text: "API Reference", link: "/api" },
       { text: "Session", link: "/session" },
       { text: "Deployment", link: "/deployment" },
@@ -15,6 +16,7 @@ export default {
         text: "Documentation",
         items: [
           { text: "Getting Started", link: "/" },
+          { text: "The Vision", link: "/vision" },
           { text: "API Guide", link: "/api" },
           { text: "Remote Session", link: "/session" },
           { text: "24/7 Deployment", link: "/deployment" },

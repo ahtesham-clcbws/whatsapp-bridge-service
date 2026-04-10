@@ -11,6 +11,7 @@ A generic, headless, and modular **WhatsApp-to-HTTP Bridge** designed for reliab
 - `[x]` **Weekly SQLite Audit Logs**: High-efficiency database archiving.
 - `[x]` **Webhook Engine**: Real-time delivery receipts and incoming message callbacks.
 - `[x]` **Exponential Backoff Retry**: Automated recovery for temporary socket failures.
+- `[x]` **Automated Pre-Flight Testing**: One-command validation for API integrity.
 - `[x]` **API-based Log Access**: Secured `GET /logs` endpoint for history.
 - `[x]` **VitePress Documentation**: High-fidelity, versioned documentation system.
 
@@ -18,7 +19,7 @@ A generic, headless, and modular **WhatsApp-to-HTTP Bridge** designed for reliab
 
 ## 🛠️ API & Documentation
 
-For full technical details, authentication guides, andSDK examples, visit our official documentation site:
+For full technical details, **[The Vision](/vision)**, authentication guides, and SDK examples, visit our official documentation site:
 
 👉 **[Launch Documentation Portal](https://ahtesham-clcbws.github.io/whatsapp-bridge-service/)**
 
