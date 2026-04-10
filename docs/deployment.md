@@ -112,12 +112,12 @@ DigitalOcean offers both a simple "App Platform" and traditional "Droplets" (VPS
 
 Once logged into your Ubuntu/Linux server, run these in order:
 
-### 1. Install Node.js (Version 16+)
-The bridge is optimized for **Node.js 16, 18, and 20**. While Node 20 is recommended for modern VPS instances, we maintain compatibility with Node 16 for legacy hardware.
+### 1. Install Node.js (Standard: 18+)
+The bridge is designed for **Node.js 18 or 20**. These versions are **required** for modern security, V8 performance, and long-term ecosystem stability.
 
 ```bash
-# Example for Node 18 (Highly stable for ARM/x64)
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# Recommended for standard servers (Node 20)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 ```
 
