@@ -7,7 +7,8 @@ export default {
       { text: "Home", link: "/" },
       { text: "API Reference", link: "/api" },
       { text: "Session", link: "/session" },
-      { text: "Deployment", link: "/deployment" }
+      { text: "Deployment", link: "/deployment" },
+      { text: "Acknowledgements", link: "/acknowledgments" }
     ],
     sidebar: [
       {
@@ -16,7 +17,8 @@ export default {
           { text: "Getting Started", link: "/" },
           { text: "API Guide", link: "/api" },
           { text: "Remote Session", link: "/session" },
-          { text: "24/7 Deployment", link: "/deployment" }
+          { text: "24/7 Deployment", link: "/deployment" },
+          { text: "Acknowledgements", link: "/acknowledgments" }
         ]
       }
     ],
