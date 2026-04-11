@@ -12,6 +12,7 @@ export default {
       { text: "The Vision", link: "/vision" },
       { text: "API Reference", link: "/api" },
       { text: "Session", link: "/session" },
+      { text: "Admin Panel", link: "/admin-panel" },
       { text: "History", link: "/changelogs/v3.7.0" },
       { text: "Deployment", link: "/deployment" },
       { text: "Acknowledgements", link: "/acknowledgments" }
@@ -25,6 +26,7 @@ export default {
           { text: "API Guide", link: "/api" },
           { text: "API Client Testing", link: "/api-testing" },
           { text: "Remote Session", link: "/session" },
+          { text: "Admin Panel Guide", link: "/admin-panel" },
           { text: "24/7 Deployment", link: "/deployment" },
           { text: "Acknowledgements", link: "/acknowledgments" }
         ]

@@ -31,11 +31,32 @@ All session credentials are encrypted and stored in the root `auth/` directory.
 - **Persistence**: Once linked, the bridge will auto-reconnect on restart.
 - **MFA Protection**: In v3.7.0, all session management functions via the dashboard are protected by **WhatsApp-Native MFA**. Attempts to logout or fetch QR strings require a valid OTP.
 
-### Remote Logout
-`POST /session/logout`
-- Triggers a clean social logout.
-- **Wipes the local `auth/` directory** for your protection.
-- Accessible via the **"Security"** tab in the Admin Panel.
+---
+
+## 🛠️ Technical Endpoint Reference
+
+All endpoints below reside under the `/session` prefix and require the `x-admin-token` header (except `/status`).
+
+### 1. `GET /session/status`
+Check if the WhatsApp socket is currently active.
+**Response**: `{"connected": true}`
+
+### 2. `GET /session/qr`
+Retrieve the latest base64 QR string for pairing.
+**Response**: `{"qr": "2@..."}`
+
+### 3. `POST /session/pairing-code`
+Request an 8-digit pairing code for phone-number-based linking.
+**Payload**: `{"number": "910000000000"}`
+**Response**: `{"code": "ABC123XY"}`
+
+### 4. `GET /session/groups`
+Retrieve a list of all participating groups for the current session.
+**Response**: `[{ "id": "120363...@g.us", "subject": "Home", "participants": 5 }]`
+
+### 5. `POST /session/logout`
+Terminate the current session and **wipe the local auth directory**.
+**Response**: `{"status": "success", "message": "Session cleared."}`
 
 ---
 
