@@ -9,39 +9,62 @@ export default {
     logo: '/logo.png',
     nav: [
       { text: "Home", link: "/" },
-      { text: "The Vision", link: "/vision" },
+      { 
+        text: "Documentation", 
+        items: [
+          { text: "The Vision", link: "/vision" },
+          { text: "Getting Started", link: "/" },
+          { text: "Deployment", link: "/deployment" },
+          { text: "Acknowledgements", link: "/acknowledgments" }
+        ]
+      },
       { text: "API Reference", link: "/api" },
-      { text: "Session", link: "/session" },
-      { text: "Admin Panel", link: "/admin-panel" },
-      { text: "History", link: "/changelogs/v3.7.0" },
-      { text: "Deployment", link: "/deployment" },
-      { text: "Acknowledgements", link: "/acknowledgments" }
+      { text: "Dashboard", link: "/admin-panel" },
+      { 
+        text: "Project History", 
+        items: [
+          { text: "Changelog", link: "/changelogs/v3.7.0" },
+          { text: "Roadmap", link: "/#future-roadmap" }
+        ]
+      }
     ],
     sidebar: [
       {
-        text: "Documentation",
+        text: "Introduction",
         items: [
-          { text: "Getting Started", link: "/" },
-          { text: "The Vision", link: "/vision" },
-          { text: "API Guide", link: "/api" },
-          { text: "API Client Testing", link: "/api-testing" },
-          { text: "Remote Session", link: "/session" },
+          { text: "Home & Intro", link: "/" },
+          { text: "The Vision", link: "/vision" }
+        ]
+      },
+      {
+        text: "Messaging & API",
+        items: [
+          { text: "Full API Guide", link: "/api" },
+          { text: "Postman Testing", link: "/api-testing" },
+          { text: "Session Control", link: "/session" }
+        ]
+      },
+      {
+        text: "Instance Management",
+        items: [
           { text: "Admin Panel Guide", link: "/admin-panel" },
-          { text: "Update & Upgrade", link: "/upgrade" },
-          { text: "24/7 Deployment", link: "/deployment" },
+          { text: "Upgrade & Updates", link: "/upgrade" },
+          { text: "24/7 Deployment", link: "/deployment" }
+        ]
+      },
+      {
+        text: "Versions & Legal",
+        items: [
+          { text: "Latest v3.7.0", link: "/changelogs/v3.7.0" },
           { text: "Acknowledgements", link: "/acknowledgments" }
         ]
       },
       {
-        text: "Project History",
+        text: "Legacy Archives",
+        collapsed: true,
         items: [
-          { text: "v3.7.0 (Latest)", link: "/changelogs/v3.7.0" },
           { text: "v3.0.0", link: "/changelogs/v3.0.0" },
           { text: "v2.4.0", link: "/changelogs/v2.4.0" },
-          { text: "v2.3.0", link: "/changelogs/v2.3.0" },
-          { text: "v2.2.0", link: "/changelogs/v2.2.0" },
-          { text: "v2.1.0", link: "/changelogs/v2.1.0" },
-          { text: "v2.0.0", link: "/changelogs/v2.0.0" },
           { text: "v1.x Series", link: "/changelogs/v1.3.0" }
         ]
       }
