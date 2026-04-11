@@ -27,6 +27,7 @@ export default {
           { text: "API Client Testing", link: "/api-testing" },
           { text: "Remote Session", link: "/session" },
           { text: "Admin Panel Guide", link: "/admin-panel" },
+          { text: "Update & Upgrade", link: "/upgrade" },
           { text: "24/7 Deployment", link: "/deployment" },
           { text: "Acknowledgements", link: "/acknowledgments" }
         ]
