@@ -5,10 +5,8 @@
  */
 
 const axios = require('axios');
-const pino = require('pino');
-require('dotenv').config();
+const logger = require('./logger');
 
-const logger = pino({ level: 'info' });
 const webhookUrl = process.env.WEBHOOK_URL;
 
 /**

@@ -9,16 +9,163 @@ const {
     useMultiFileAuthState, 
     DisconnectReason, 
     fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore 
+    makeCacheableSignalKeyStore,
+    Browsers
 } = require('@whiskeysockets/baileys');
-const pino = require('pino');
+const logger = require('./logger');
 const qrcode = require('qrcode-terminal');
 const { Boom } = require('@hapi/boom');
-const { getDatabase } = require('./database');
+const { getDatabase, getSystemDatabase, getPendingQueue, deleteQueueItem, updateQueueItem } = require('./database');
 const fs = require('fs');
 const path = require('path');
 const { notifyWebhook } = require('./webhook');
 require('dotenv').config();
+
+let sock;
+let isConnected = false;
+let latestQR = null;
+
+/**
+ * Intelligent Message Throttling & Queue Manager
+ */
+class MessageQueue {
+    constructor() {
+        this.isProcessing = false;
+        this.maxRetries = parseInt(process.env.MAX_RETRIES) || 3;
+    }
+
+    /**
+     * Enqueue a new message payload into SQLite
+     */
+    async enqueue(recipient, items, isPriority = false, auditId = null) {
+        const sysDb = await getSystemDatabase();
+        // We store the batch items as a JSON payload. 
+        // If there are multiple items in a batch, we'll process them as a single queue entry.
+        return new Promise((resolve, reject) => {
+            sysDb.run(
+                `INSERT INTO pending_queue (recipient, payload, is_priority, audit_id) VALUES (?, ?, ?, ?)`,
+                [recipient, JSON.stringify(items), isPriority ? 1 : 0, auditId],
+                function(err) {
+                    if (err) return reject(err);
+                    resolve(this.lastID);
+                }
+            );
+        }).then(id => {
+            this.trigger();
+            return id;
+        });
+    }
+
+    /**
+     * Kickstart the processing loop if not already running
+     */
+    async trigger() {
+        if (this.isProcessing || !isConnected) return;
+        this.isProcessing = true;
+        this.work().catch(err => logger.error('Queue Worker Error:', err));
+    }
+
+    /**
+     * Main Worker Loop
+     */
+    async work() {
+        while (isConnected) {
+            const pending = await getPendingQueue();
+            if (pending.length === 0) {
+                this.isProcessing = false;
+                break;
+            }
+
+            const active = pending[0];
+            try {
+                await this.dispatch(active);
+                await deleteQueueItem(active.id);
+                
+                // Update Audit Log to 'Sent' if audit_id exists
+                if (active.audit_id) {
+                    const db = await getDatabase();
+                    db.run(`UPDATE audit_logs SET status = ? WHERE id = ?`, ['Sent', active.audit_id]);
+                }
+
+                // Intelligent Throttling logic
+                const delay = this.calculateDelay(active);
+                logger.info(`Queue: Message sent to ${active.recipient}. Throttling for ${delay}ms...`);
+                await new Promise(r => setTimeout(r, delay));
+            } catch (err) {
+                logger.error(`Queue: Failed to process ID ${active.id}: ${err.message}`);
+                const nextRetry = (active.retry_count || 0) + 1;
+                
+                if (nextRetry > this.maxRetries) {
+                    logger.error(`Queue: ID ${active.id} exceeded max retries. Purging.`);
+                    if (active.audit_id) {
+                        const db = await getDatabase();
+                        db.run(`UPDATE audit_logs SET status = ?, error = ? WHERE id = ?`, ['Failed', err.message, active.audit_id]);
+                    }
+                    await deleteQueueItem(active.id);
+                } else {
+                    await updateQueueItem(active.id, nextRetry, err.message);
+                    await new Promise(r => setTimeout(r, 5000 * nextRetry)); // Backoff
+                }
+            }
+        }
+        this.isProcessing = false;
+    }
+
+    /**
+     * Executes the actual Baileys send command
+     */
+    async dispatch(queueItem) {
+        const items = JSON.parse(queueItem.payload);
+        const jid = queueItem.recipient.includes('@') ? queueItem.recipient : `${queueItem.recipient.replace(/\D/g, '')}@s.whatsapp.net`;
+
+        for (const item of items) {
+            let messagePayload = {};
+            const content = item.text || item.msg;
+            const isPdf = (item.filename || '').toLowerCase().endsWith('.pdf');
+
+            // CRITICAL FIX: Reconstruct Buffer from JSON-serialized format
+            let dataBuffer = item.buffer;
+            if (dataBuffer && typeof dataBuffer === 'object' && dataBuffer.type === 'Buffer') {
+                dataBuffer = Buffer.from(dataBuffer.data);
+            }
+
+            switch (item.type) {
+                case 'image': messagePayload = { image: dataBuffer, caption: content }; break;
+                case 'document': messagePayload = { 
+                    document: dataBuffer, 
+                    mimetype: isPdf ? 'application/pdf' : 'application/octet-stream', 
+                    fileName: item.filename || 'document',
+                    caption: item.text 
+                }; break;
+                case 'text': messagePayload = { text: content }; break;
+                default: continue;
+            }
+            await sock.sendMessage(jid, messagePayload);
+        }
+    }
+
+    /**
+     * Calculates delay based on recipient type, priority, and time of day
+     */
+    calculateDelay(item) {
+        if (item.is_priority) return 500; // Immediate priority lane
+
+        const isGroup = item.recipient.endsWith('@g.us');
+        let min = isGroup ? 5000 : 2000;
+        let max = isGroup ? 12000 : 5000;
+
+        // Human-Hour Simulation (1 AM - 6 AM)
+        const hour = new Date().getHours();
+        if (hour >= 1 && hour <= 6) {
+            min *= 2;
+            max *= 2;
+        }
+
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+}
+
+const queue = new MessageQueue();
 
 /**
  * @typedef {Object} BatchItem
@@ -29,21 +176,16 @@ require('dotenv').config();
  */
 
 // Initialize logger
-const logger = pino({ level: 'info' });
-const authDir = process.env.WHATSAPP_AUTH_DIR || './auth';
 
-let sock;
-let isConnected = false;
-let latestQR = null;
+const authDir = process.env.WHATSAPP_AUTH_DIR || './auth';
 
 /**
  * Initializes the connection to WhatsApp.
  */
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
-    const { version } = await fetchLatestBaileysVersion();
-    
-    logger.info(`Starting WhatsApp Bridge with Baileys v${version.join('.')}`);
+    const { version, isLatest } = await fetchLatestBaileysVersion();
+    logger.info(`Starting WhatsApp Bridge with Baileys v${version.join('.')} [Latest: ${isLatest}]`);
 
     sock = makeWASocket({
         version,
@@ -53,7 +195,7 @@ async function connectToWhatsApp() {
         },
         printQRInTerminal: false,
         logger,
-        browser: ['WhatsApp Bridge Service', 'Chrome', '1.1.0'],
+        browser: Browsers.macOS('Desktop'),
         connectTimeoutMs: 60000,
         defaultQueryTimeoutMs: 60000
     });
@@ -62,12 +204,14 @@ async function connectToWhatsApp() {
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
-
+        
+        // Diagnostic: See if the update is firing at all
+        if (connection) logger.info(`Connection Status: ${connection}`);
         if (qr) {
+            console.log('\n>>> NEW QR CODE RECEIVED - RENDER START >>>\n');
             latestQR = qr;
-            console.log('\n--- SCAN THIS QR CODE WITH YOUR WHATSAPP ---\n');
             qrcode.generate(qr, { small: true });
-            console.log('\n-------------------------------------------\n');
+            console.log('\n<<< RENDER END <<<\n');
         }
 
         if (connection === 'close') {
@@ -87,10 +231,8 @@ async function connectToWhatsApp() {
             latestQR = null;
             logger.info('WhatsApp connection established successfully!');
             
-            const selfJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-            await sock.sendMessage(selfJid, { 
-                text: '✅ *WhatsApp Bridge Service Connected!*\n\nGroup support and enhanced error handling are now active.' 
-            });
+            // Kickstart the queue worker on connection
+            queue.trigger();
         }
     });
 
@@ -117,6 +259,7 @@ async function connectToWhatsApp() {
      * Webhook Hook: Delivery Receipts & Status Updates
      */
     sock.ev.on('messages.update', async (updates) => {
+        logger.trace({ updates }, '');
         for (const update of updates) {
             if (update.update.status) {
                 const statusMap = { 1: 'Pending', 2: 'Sent', 3: 'Delivered', 4: 'Read', 5: 'Played' };
@@ -141,20 +284,47 @@ async function connectToWhatsApp() {
         }
     });
 
+    /** DIAGNOSTIC LISTENERS **/
+    sock.ev.on('messaging-history.set', (data) => logger.trace());
+    sock.ev.on('presence.update', (data) => logger.trace());
+    sock.ev.on('chats.update', (updates) => {
+        const reduced = updates.map(u => ({ id: u.id, name: u.name, unread: u.unreadCount }));
+        logger.trace();
+    });
+
+    /**
+     * Heartbeat Logic: Ensures the socket stays active by performing
+     * a light status check every 30 minutes.
+     */
+    setInterval(async () => {
+        if (isConnected && sock) {
+            try {
+                // Perform a light query to verify socket health
+                await sock.query({ tag: 'iq', attrs: { type: 'get', xmlns: 'w:p', to: '@s.whatsapp.net' }, content: [] });
+                logger.info('Socket Heartbeat: Connection stable.');
+            } catch (err) {
+                logger.warn('Socket Heartbeat: Ping failed. Potential stale connection.');
+            }
+        }
+    }, 30 * 60 * 1000);
+
     return sock;
 }
 
 /**
- * Sends a dynamic MFA authentication code to the connected WhatsApp account (Self-Message).
+ * Sends a dynamic MFA authentication code to a specified recipient or the self account.
  * @param {string} code - The 6-digit OTP.
+ * @param {string} [recipient] - Optional recipient JID or phone number.
  */
-async function sendAuthCode(code) {
+async function sendAuthCode(code, recipient = null) {
     if (!isConnected || !sock) throw new Error('WhatsApp not connected');
     
-    // The self JID is the connected number's ID
-    const selfJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+    // Default to self if no recipient provided
+    const jid = recipient 
+        ? (recipient.includes('@') ? recipient : `${recipient.replace(/\D/g, '')}@s.whatsapp.net`)
+        : (sock.user.id.split(':')[0] + '@s.whatsapp.net');
     
-    await sock.sendMessage(selfJid, { 
+    await sock.sendMessage(jid, { 
         text: `🔐 *Bridge Dashboard Access*\n\nYour one-time login code is: *${code}*\n\n_If you did not request this, please check your server security._` 
     });
 }
@@ -203,6 +373,7 @@ async function logoutSession() {
  * @param {number} logId - Audit log reference.
  */
 async function sendBatch(recipient, items, logId) {
+    logger.info(`[BRIDGE] sendBatch starting for ${recipient}`);
     if (!isConnected) throw new Error('WhatsApp not connected');
 
     const jid = recipient.includes('@') ? recipient : `${recipient.replace(/\D/g, '')}@s.whatsapp.net`;
@@ -214,12 +385,13 @@ async function sendBatch(recipient, items, logId) {
         for (const item of items) {
             let messagePayload = {};
             
+            const isPdf = (item.filename || '').toLowerCase().endsWith('.pdf');
             switch (item.type) {
                 case 'text': messagePayload = { text: item.text }; break;
                 case 'image': messagePayload = { image: item.buffer, caption: item.text }; break;
                 case 'document': messagePayload = { 
                     document: item.buffer, 
-                    mimetype: 'application/octet-stream', 
+                    mimetype: isPdf ? 'application/pdf' : 'application/octet-stream', 
                     fileName: item.filename || 'document',
                     caption: item.text 
                 }; break;
@@ -233,19 +405,19 @@ async function sendBatch(recipient, items, logId) {
             while (attempt <= maxRetries && !success) {
                 try {
                     const sentMsg = await sock.sendMessage(jid, messagePayload);
+                    logger.trace({ sentMsg }, '[BRIDGE] RAW DISPATCH RESPONSE');
                     success = true;
                     
-                    if (sentMsg && logId) {
+                    if (logId) {
+                        const db = await getDatabase();
                         db.run(`UPDATE audit_logs SET status = ?, whatsapp_id = ?, retry_count = ? WHERE id = ?`, 
-                            ['Sent', sentMsg.key.id, attempt, logId]);
+                            ['Sent', sentMsg?.key?.id || 'ack', attempt, logId]);
                     }
                 } catch (err) {
                     lastError = err;
                     attempt++;
-                    
                     if (attempt <= maxRetries) {
-                        logger.warn({ recipient, attempt, error: err.message }, 'Dispatch failed, retrying...');
-                        if (logId) db.run(`UPDATE audit_logs SET retry_count = ? WHERE id = ?`, [attempt, logId]);
+                        logger.warn(`[BRIDGE] Direct retry ${attempt} for ${recipient}: ${err.message}`);
                         await new Promise(resolve => setTimeout(resolve, retryDelays[attempt - 1] || 5000));
                     }
                 }
@@ -265,6 +437,8 @@ async function sendBatch(recipient, items, logId) {
 module.exports = {
     connectToWhatsApp,
     sendBatch,
+    enqueue: (recipient, items, isPriority, auditId) => queue.enqueue(recipient, items, isPriority, auditId),
+    getQueueStatus: () => ({ isProcessing: queue.isProcessing }),
     getAllGroups,
     getLatestQR: () => latestQR,
     getPairingCode,

@@ -2,13 +2,17 @@ export default {
   title: "WhatsApp Bridge Service",
   description: "A generic, headless, and modular WhatsApp to HTTP bridge service.",
   base: "/whatsapp-bridge-service/",
+  head: [
+    ['link', { rel: 'icon', href: '/whatsapp-bridge-service/favicon.png' }]
+  ],
   themeConfig: {
+    logo: '/logo.png',
     nav: [
       { text: "Home", link: "/" },
       { text: "The Vision", link: "/vision" },
       { text: "API Reference", link: "/api" },
       { text: "Session", link: "/session" },
-      { text: "History", link: "/changelogs/v2.4.0" },
+      { text: "History", link: "/changelogs/v3.7.0" },
       { text: "Deployment", link: "/deployment" },
       { text: "Acknowledgements", link: "/acknowledgments" }
     ],
@@ -28,7 +32,9 @@ export default {
       {
         text: "Project History",
         items: [
-          { text: "v2.4.0 (Latest)", link: "/changelogs/v2.4.0" },
+          { text: "v3.7.0 (Latest)", link: "/changelogs/v3.7.0" },
+          { text: "v3.0.0", link: "/changelogs/v3.0.0" },
+          { text: "v2.4.0", link: "/changelogs/v2.4.0" },
           { text: "v2.3.0", link: "/changelogs/v2.3.0" },
           { text: "v2.2.0", link: "/changelogs/v2.2.0" },
           { text: "v2.1.0", link: "/changelogs/v2.1.0" },

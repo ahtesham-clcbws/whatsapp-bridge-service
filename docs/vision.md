@@ -18,7 +18,16 @@ Most "always-on" scripts today require modern servers with high RAM. This projec
 Privacy is paramount. Instead of relying on static passwords or third-party auth providers, we use **WhatsApp-Native MFA**. By turning your own phone into the "Key" for the dashboard (via OTP messages), we ensure that access remains in your physical possession.
 
 ### 4. Zero-Bloat Standard
-V3.0 of the Admin Dashboard is built with zero large frameworks. No React, no Vue, no overhead. Just pure, clean, and blazing-fast HTML, CSS, and Vanilla JavaScript. 
+V3.x of the Admin Dashboard is built with zero large frameworks. No React, no Vue, no overhead. Just pure, clean, and blazing-fast HTML, CSS, and Vanilla JavaScript. We believe that professional tools should be as lightweight as they are powerful.
+
+### 5. Historical Transparency
+With the introduction of v3.7.0, we prioritize data forensics. The future roadmap includes the **Historical SQLite Explorer**, designed to provide an executive search interface across all historical weekly databases, ensuring that every message ever dispatched can be audited and analyzed with a single click.
+
+### 6. Modular Router Pattern
+To support enterprise scaling, v3.7.0 formally shifts to a **Modular Router Pattern**. By partitioning core logic into independent domains (`auth`, `session`, `message`, `admin`), we ensure that the bridge remains maintainable, testable, and resilient to failure in any single module.
+
+### 7. Official Channel Integration (Meta API)
+To ensure absolute business continuity, the future roadmap includes an optional, direct integration with the **Meta WhatsApp Business API**. This serves as a fail-safe, high-trust channel for sensitive communications, providing 0% ban risk for official enterprise operations while preserving the freedom and low-cost nature of the self-hosted core.
 
 ---
 

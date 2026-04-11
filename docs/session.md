@@ -1,12 +1,12 @@
-# Remote Session Management
+# Remote Session Management (v3.7.0)
 
-The service is designed to be fully manageable from your external dashboard or admin panel.
+The service is designed to be fully manageable from the **Integrated Admin Dashboard** or via external API integrations.
 
 ---
 
 ## 📲 Linking a Device
 
-To link your WhatsApp account without terminal access, use the following flow:
+To link your WhatsApp account, use the **Dashboard Pairing View** (recommended) or the direct API flow:
 
 ### 1. Check Status
 `GET /session/status`
@@ -14,9 +14,10 @@ To link your WhatsApp account without terminal access, use the following flow:
 
 ### 2. Pairing via QR Code
 `GET /session/qr`
-- Returns the latest QR string. Use a JavaScript library in your dashboard to render this as an image.
+- Returns the latest QR string for rendering.
+- **Dashboard**: Visit `/dashboard/` to scan the live QR code directly in your browser.
 
-### 3. Pairing via 8-Digit Code
+### 3. Pairing via 8-Digit Code (Remote)
 `POST /session/pairing-code`
 - **Body**: `{"number": "910000000000"}`
 - Enter the returned 8-digit code on your phone in **Linked Devices > Link with Phone Number**.
@@ -26,20 +27,20 @@ To link your WhatsApp account without terminal access, use the following flow:
 ## 🔒 Security & Persistence
 
 ### The `auth/` Directory
-All session credentials are stored in the root `auth/` directory. 
-- **Persistence**: Once linked, the bridge will auto-reconnect on restart using these files.
-- **Safety**: **NEVER** share or commit this folder to Git. It contains the raw session keys used to control your WhatsApp account.
-- **Backups**: We recommend backing up this folder periodically if you are on unstable hardware.
+All session credentials are encrypted and stored in the root `auth/` directory. 
+- **Persistence**: Once linked, the bridge will auto-reconnect on restart.
+- **MFA Protection**: In v3.7.0, all session management functions via the dashboard are protected by **WhatsApp-Native MFA**. Attempts to logout or fetch QR strings require a valid OTP.
 
 ### Remote Logout
 `POST /session/logout`
 - Triggers a clean social logout.
 - **Wipes the local `auth/` directory** for your protection.
+- Accessible via the **"Security"** tab in the Admin Panel.
 
 ---
 
-## 🖼️ v3.0 Preview: DashLink
-In the upcoming **v3.0.0 Admin Dashboard**, these manual steps (copying QR strings, etc.) will be replaced by an interactive "Pairing View." You will be able to see the QR code live in your browser and manage your session with a single click.
+## 🛡️ Persistence Engine
+Starting with **v3.2.0**, your session state and authentication metadata are further protected by the **Invincible Sessions** layer. This uses the `system.db` SQLite database to track session heartbeat and prevents "Ghost Connections" after a server reboot.
 
 ---
 

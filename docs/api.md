@@ -47,7 +47,56 @@ The bridge can notify your external backend service in real-time when events occ
 }
 ```
 
+## 🧩 Administrative Endpoints (v3.7.0)
+
+Beyond standard messaging, the bridge provides a suite of administrative tools for telemetry and data management. These require the `x-admin-token` header.
+
+### 1. Delivery Analytics
+Retrieve historical delivery success metrics across a dynamic time range.
+
+```http
+GET /api/admin/analytics/delivery?days=30
+```
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `days` | `Integer` | Number of past days to aggregate (e.g., 7, 30, 90). |
+
+**Response (200 OK):**
+```json
+[
+  { "day": "2026-04-11", "success": 142, "failed": 3 },
+  { "day": "2026-04-12", "success": 156, "failed": 0 }
+]
+```
+
+### 2. Purge System Log File
+Permanently delete a specific file-based log from the server.
+
+```http
+DELETE /api/admin/logs?date=2026-04-11&level=info
+```
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `date` | `String` | The log date in `YYYY-MM-DD` format. |
+| `level` | `String` | The log level (`info`, `warn`, `error`, `debug`). |
+
+### 3. Destroy Audit Record
+Permanently remove a specific message record from the weekly audit database.
+
+```http
+DELETE /api/admin/audit/:id?week=2026-W15
+```
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `String` | The unique ID of the audit record. |
+| `week` | `String` | The weekly database identifier (e.g., `2026-W15`). |
+
 ---
+
+## 📜 Error Reference
 
 ## 🛡️ Resilience & Retries (v2.3.0)
 
@@ -78,7 +127,7 @@ Returns the current vitals of the bridge service. (Does not require API_KEY for 
   "status": "online",
   "whatsapp": "connected",
   "uptime": 12450,
-  "version": "2.1.0",
+  "version": "3.7.0",
   "timestamp": "2026-04-10T10:00:00.000Z"
 }
 ```

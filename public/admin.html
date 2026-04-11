@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bridge Command v3.1 PRO</title>
+    <title>Bridge Command v3.7</title>
+    <link rel="icon" type="image/png" href="/dashboard/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #080808; color: #d1d5db; scrollbar-width: none; -webkit-font-smoothing: antialiased; }
-        .glass { background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.03); backdrop-filter: blur(8px); }
+        body { font-family: 'Inter', sans-serif; background-color: #121212; color: #e5e7eb; scrollbar-width: none; -webkit-font-smoothing: antialiased; }
+        .glass { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
         .wa-accent { color: #2ecc71; }
         .wa-bg { background-color: #2ecc71; }
         .tab-active { border-bottom: 2px solid #2ecc71; color: #2ecc71; }
         .tab-pane { display: none; } .tab-pane.active { display: block; }
-        .progress-bar { height: 2px; border-radius: 1px; background: rgba(255, 255, 255, 0.05); overflow: hidden; }
+        .progress-bar { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
         .progress-fill { height: 100%; transition: width 0.5s ease; }
         ::-webkit-scrollbar { display: none; }
         @keyframes fade { from { opacity: 0; } to { opacity: 1; } } .animate-in { animation: fade 0.2s ease-in-out forwards; }
@@ -25,7 +26,10 @@
     <!-- Ultra-Compact Header -->
     <header class="max-w-6xl mx-auto flex items-center justify-between mb-4 border-b border-white/5 pb-3">
         <div class="flex items-center gap-4">
-            <h1 class="text-xs font-black tracking-tighter uppercase italic">Bridge <span class="wa-accent">v3.1 PRO</span></h1>
+            <div class="flex items-center gap-2">
+                <img src="/dashboard/logo.png" alt="Logo" class="w-5 h-5">
+                <h1 class="text-xs font-black tracking-tighter uppercase italic">Bridge <span class="wa-accent">v3.7</span></h1>
+            </div>
             <div class="h-4 w-px bg-white/10"></div>
             <div class="flex items-center gap-3 font-bold text-[8px] uppercase tracking-widest">
                 <p id="uptimeDisplay" class="text-gray-500">Uptime: --:--</p>
@@ -43,6 +47,8 @@
     <nav class="max-w-6xl mx-auto mb-4 flex gap-6 text-[9px] font-black uppercase tracking-widest border-b border-white/5 no-scrollbar overflow-x-auto">
         <button onclick="switchTab('telemetry')" id="tab-telemetry" class="pb-2 px-1 tab-active transition-all">Telemetry</button>
         <button onclick="switchTab('orchestrator')" id="tab-orchestrator" class="pb-2 px-1 text-gray-500 transition-all">Orchestrate</button>
+        <button onclick="switchTab('queue')" id="tab-queue" class="pb-2 px-1 text-gray-500 transition-all">Queue</button>
+        <button onclick="switchTab('logs')" id="tab-logs" class="pb-2 px-1 text-gray-500 transition-all">System Logs</button>
         <button onclick="switchTab('directory')" id="tab-directory" class="pb-2 px-1 text-gray-500 transition-all">Groups</button>
         <button onclick="switchTab('vault')" id="tab-vault" class="pb-2 px-1 text-gray-500 transition-all">Vault</button>
         <button onclick="switchTab('settings')" id="tab-settings" class="pb-2 px-1 text-gray-500 transition-all">Maintenance</button>
@@ -51,15 +57,45 @@
     <main class="max-w-6xl mx-auto">
         <!-- PANE: TELEMETRY (SCREENSHOT OPTIMIZED) -->
         <div id="pane-telemetry" class="tab-pane active animate-in space-y-4">
-            <div class="grid grid-cols-4 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                <div class="glass p-3 rounded-lg border-l-2 border-wa-accent/30"><p class="text-[7px] font-bold text-gray-500 uppercase tracking-widest mb-1">CPU Load (1m)</p><h3 id="hwCpu" class="text-sm font-black italic italic">--</h3></div>
+                <div class="glass p-3 rounded-lg border-l-2 border-wa-accent/30"><p class="text-[7px] font-bold text-gray-500 uppercase tracking-widest mb-1">Memory Usage</p><h3 id="hwMem" class="text-sm font-black italic italic">--</h3></div>
+                <div class="glass p-3 rounded-lg border-l-2 border-wa-accent/30"><p class="text-[7px] font-bold text-gray-500 uppercase tracking-widest mb-1">Server Uptime</p><h3 id="hwUptime" class="text-sm font-black italic italic">--</h3></div>
+            </div>
+
+            <div class="grid grid-cols-5 gap-3">
                 <div class="glass p-3 rounded-lg"><p class="text-[7px] font-bold text-gray-500 uppercase tracking-widest mb-1">Total</p><h3 id="statTotal" class="text-lg font-black">0</h3></div>
                 <div class="glass p-3 rounded-lg"><p class="text-[7px] font-bold text-green-500 uppercase tracking-widest mb-1">Success</p><h3 id="statSuccess" class="text-lg font-black">0</h3></div>
                 <div class="glass p-3 rounded-lg"><p class="text-[7px] font-bold text-red-500 uppercase tracking-widest mb-1">Failed</p><h3 id="statFailed" class="text-lg font-black">0</h3></div>
                 <div class="glass p-3 rounded-lg"><p class="text-[7px] font-bold text-blue-500 uppercase tracking-widest mb-1">Retry</p><h3 id="statRetries" class="text-lg font-black">0</h3></div>
+                <div class="glass p-3 rounded-lg border-wa-accent/20"><p class="text-[7px] font-bold wa-accent uppercase tracking-widest mb-1">Queue</p><h3 id="statQueue" class="text-lg font-black">0</h3></div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div class="lg:col-span-2 glass p-4 rounded-xl space-y-4">
+            <div class="glass p-4 rounded-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-4">
+                        <h2 class="text-[9px] font-black uppercase tracking-widest italic">Performance Pulse</h2>
+                        <div class="flex items-center gap-2 glass p-1 rounded-lg">
+                            <button onclick="setAnalyticsRange(7)" id="range-7" class="px-2 py-0.5 rounded text-[7px] font-black uppercase wa-bg text-black transition-all">7D</button>
+                            <button onclick="setAnalyticsRange(30)" id="range-30" class="px-2 py-0.5 rounded text-[7px] font-black uppercase transition-all">30D</button>
+                            <button onclick="setAnalyticsRange(90)" id="range-90" class="px-2 py-0.5 rounded text-[7px] font-black uppercase transition-all">90D</button>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 text-[7px] font-bold uppercase tracking-tighter">
+                        <span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-green-500"></div> SUCCESS</span>
+                        <span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500"></div> FAILURE</span>
+                        <span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-gray-500"></div> SILENCE</span>
+                    </div>
+                </div>
+                <div id="chartContainer" class="h-40 w-full relative group">
+                    <svg id="performanceChart" class="w-full h-full overflow-visible"></svg>
+                    <!-- Floating Tooltip -->
+                    <div id="chartTooltip" class="absolute pointer-events-none opacity-0 glass p-2 rounded border border-white/10 text-[8px] z-50 transition-opacity whitespace-nowrap"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div class="lg:col-span-7 glass p-4 rounded-xl space-y-4">
                     <div class="flex items-center justify-between">
                         <h2 class="text-[9px] font-black uppercase tracking-widest italic">Core Session</h2>
                         <div id="connStatus" class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[7px] font-black uppercase">
@@ -82,7 +118,7 @@
                         <button onclick="disconnect()" class="bg-red-500/10 text-red-500 px-3 py-1 rounded text-[7px] font-black uppercase tracking-widest">Destroy</button>
                     </div>
                 </div>
-                <div class="glass p-4 rounded-xl">
+                <div class="lg:col-span-5 glass p-4 rounded-xl">
                     <h2 class="text-[9px] font-black uppercase tracking-widest italic mb-4">Activity Pulse</h2>
                     <div id="logList" class="space-y-1.5 max-h-[220px] overflow-y-auto"></div>
                 </div>
@@ -97,9 +133,74 @@
                     <div class="space-y-1.5"><label class="text-[7px] font-black text-gray-500 uppercase tracking-widest">Payload Class</label><select id="sendType" class="w-full bg-black border border-white/5 p-2 rounded text-[9px] font-black outline-none focus:border-green-500 uppercase"><option value="text">TEXT</option><option value="image">IMAGE</option><option value="document">DOC</option></select></div>
                 </div>
                 <div class="space-y-1.5"><label class="text-[7px] font-black text-gray-500 uppercase tracking-widest">Message Content</label><textarea id="sendText" rows="3" placeholder="Enter payload..." class="w-full bg-white/5 border border-white/5 p-2 rounded text-[9px] outline-none focus:border-green-500"></textarea></div>
-                <div id="fileArea" class="hidden p-4 border border-dashed border-white/5 rounded text-center"><input type="file" id="sendFile" class="hidden"><button onclick="document.getElementById('sendFile').click()" class="text-[8px] font-black wa-accent border border-green-500/20 px-4 py-1 rounded">+ MEDIA FILE</button><p id="fileName" class="text-[7px] text-gray-600 mt-1 uppercase font-mono"></p></div>
+                <div class="flex items-center justify-between gap-4">
+                    <div id="fileArea" class="hidden p-3 border border-dashed border-white/10 rounded text-center flex-1"><input type="file" id="sendFile" class="hidden"><button onclick="document.getElementById('sendFile').click()" class="text-[8px] font-black wa-accent border border-green-500/20 px-3 py-1 rounded">+ ATTACHMENT</button><p id="fileName" class="text-[7px] text-gray-400 mt-1 uppercase font-mono"></p></div>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center gap-2 glass px-3 py-1.5 rounded-lg border-white/10">
+                            <label class="text-[7px] font-black uppercase text-gray-400">Mode</label>
+                            <select id="sendDelivery" class="bg-transparent text-white text-[8px] font-black outline-none uppercase cursor-pointer">
+                                <option value="direct" class="bg-zinc-900">Instant</option>
+                                <option value="queued" class="bg-zinc-900">Queued</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2 glass px-3 py-1.5 rounded-lg border-white/10">
+                            <input type="checkbox" id="sendPriority" class="accent-green-500 w-3 h-3">
+                            <label class="text-[7px] font-black uppercase text-gray-400">Priority</label>
+                        </div>
+                    </div>
+                </div>
                 <button id="dispatchBtn" onclick="performDispatch()" class="wa-bg w-full py-2 rounded text-black font-black uppercase tracking-[.2em] text-[10px]">Fire Message</button>
                 <div id="dispatchMsg" class="text-center text-[7px] font-black uppercase italic"></div>
+            </div>
+        </div>
+
+        <!-- PANE: QUEUE MANAGER -->
+        <div id="pane-queue" class="tab-pane animate-in">
+            <div class="glass p-4 rounded-2xl">
+                <div class="flex justify-between mb-4">
+                    <h2 class="text-[9px] font-black uppercase tracking-widest italic">Intelligent Queue</h2>
+                    <p class="text-[7px] font-bold text-gray-500 uppercase tracking-widest">Status: Throttled Delivery</p>
+                </div>
+                <div class="overflow-x-auto text-[9px]">
+                    <table class="w-full text-left uppercase">
+                        <thead>
+                            <tr class="text-[7px] text-gray-500 tracking-widest border-b border-white/5">
+                                <th class="pb-2">Recipient</th>
+                                <th class="pb-2">Priority</th>
+                                <th class="pb-2">Wait Time</th>
+                                <th class="pb-2 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="queueTableBody" class="font-bold tracking-wider">
+                            <!-- Items populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANE: SYSTEM LOGS -->
+        <div id="pane-logs" class="tab-pane animate-in max-w-5xl mx-auto">
+            <div class="glass p-4 rounded-2xl space-y-4">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-2">
+                        <h3 id="currentLogFile" class="text-[9px] font-black uppercase tracking-widest italic opacity-50">NO FILE SELECTED</h3>
+                        <button onclick="deleteCurrentLogFile()" id="deleteLogBtn" class="hidden p-1 text-red-500 hover:bg-red-500/10 rounded transition-colors" title="Delete Log File">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                    </div>
+                    <div class="flex gap-2 flex-grow max-w-sm">
+                        <select id="logFileSelect" onchange="fetchSystemLogs()" class="bg-black border border-white/10 text-[8px] font-black p-1.5 rounded outline-none uppercase flex-grow"></select>
+                        <select id="logLevelSelect" onchange="fetchSystemLogs()" class="bg-black border border-white/10 text-[8px] font-black p-1.5 rounded outline-none uppercase w-24">
+                            <option value="ERROR">ERROR</option>
+                            <option value="WARN">WARN</option>
+                            <option value="INFO" selected>INFO</option>
+                            <option value="DEBUG">DEBUG / TRACE</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="space-y-1.5"><input type="text" id="logSearch" onkeyup="applyLogFilter()" placeholder="Search metrics, identifiers, or errors..." class="w-full bg-white/5 border border-white/5 p-2 rounded text-[9px] font-mono outline-none focus:border-green-500"></div>
+                <div class="bg-black/50 border border-white/5 rounded p-2 h-[400px] overflow-y-auto font-mono text-[8px]" id="systemLogsDisplay"></div>
             </div>
         </div>
 
@@ -136,15 +237,47 @@
         </div>
     </main>
 
+    <!-- Modal: Log Detail -->
+    <div id="logModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in">
+        <div class="glass max-w-lg w-full p-6 rounded-2xl space-y-4 border-wa-accent/20">
+            <div class="flex justify-between items-center border-b border-white/5 pb-3">
+                <h2 class="text-[10px] font-black uppercase tracking-widest italic">Message Lifecycle</h2>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-white">✕</button>
+            </div>
+            <div id="modalContent" class="space-y-4">
+                <p id="modalMsg" class="text-[11px] leading-relaxed mb-6 italic opacity-80 break-all"></p>
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <div class="p-2 rounded bg-white/5 border border-white/10">
+                        <p class="text-[8px] opacity-40 uppercase font-black mb-1">Status</p>
+                        <p id="modalStatus" class="font-bold text-[10px]"></p>
+                    </div>
+                    <div class="p-2 rounded bg-white/5 border border-white/10">
+                        <p class="text-[8px] opacity-40 uppercase font-black mb-1">Timestamp</p>
+                        <p id="modalTime" class="font-bold text-[10px]"></p>
+                    </div>
+                    <div class="p-2 rounded bg-white/5 border border-white/10 col-span-2">
+                        <p class="text-[8px] opacity-40 uppercase font-black mb-1">Audit Key</p>
+                        <p id="modalWeeklyId" class="font-mono text-[9px] opacity-60"></p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="closeModal()" class="flex-1 py-2 rounded text-[9px] font-black uppercase tracking-widest bg-white/10 hover:bg-white/20 transition-all">Close</button>
+                    <button id="destroyRecordBtn" class="flex-1 py-2 rounded text-[9px] font-black uppercase tracking-widest bg-red-500/20 text-red-500 hover:bg-red-500/40 transition-all">DESTROY PERMANENTLY</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const token = localStorage.getItem('adminToken');
         if (!token) window.location.href = '/dashboard/';
 
         function formatDate(ds) {
             if (!ds) return '--:--';
-            const safe = ds.replace(' ', 'T') + 'Z';
-            const d = new Date(safe);
-            return isNaN(d.getTime()) ? ds : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const iso = ds.replace(' ', 'T');
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return ds;
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
         }
 
         async function api(path, method = 'GET', body = null) {
@@ -168,7 +301,9 @@
                document.getElementById('sendType').onchange = (e) => document.getElementById('fileArea').style.display = e.target.value === 'text' ? 'none' : 'block';
                document.getElementById('sendFile').onchange = (e) => document.getElementById('fileName').innerText = e.target.files[0]?.name.toUpperCase() || '';
             }
+            if (id === 'queue') fetchQueue();
             if (id === 'directory') fetchGroups();
+            if (id === 'logs') fetchLogDates();
             if (id === 'vault') renderTemplates();
             if (id === 'settings') fetchConfig();
         }
@@ -181,6 +316,11 @@
                     document.getElementById('statSuccess').innerText = d.metrics.success_count;
                     document.getElementById('statFailed').innerText = d.metrics.failure_count;
                     document.getElementById('statRetries').innerText = d.metrics.retry_volume;
+                    
+                    const q = await api('/api/admin/queue');
+                    document.getElementById('statQueue').innerText = q.count;
+                    if (document.getElementById('pane-queue').classList.contains('active')) renderQueueList(q.items);
+
                     document.getElementById('cpuFill').style.width = `${Math.min((d.vitals.cpu_load || 0) * 20, 100)}%`;
                     document.getElementById('cpuText').innerText = d.vitals.cpu_load || '0.0';
                     const up = d.vitals.uptime;
@@ -200,6 +340,54 @@
             } catch(e) {}
         }
 
+        async function fetchActivityPulse() {
+            try {
+                const logs = await api('/api/admin/logs/recent');
+                const list = document.getElementById('logList');
+                list.innerHTML = logs.map(log => `
+                    <div onclick="showLogDetail(${JSON.stringify(log).replace(/"/g, '&quot;')})" class="px-2 py-1.5 bg-white/5 rounded text-[8px] font-bold uppercase flex justify-between items-center cursor-pointer hover:bg-white/10 transition-all">
+                        <span class="text-gray-500 truncate max-w-[130px]">${log.recipient}</span>
+                        <span class="${log.status === 'success' ? 'text-green-500' : 'text-red-500'}">${log.status}</span>
+                        <span class="text-[7px] text-gray-600 font-mono">${formatDate(log.timestamp)}</span>
+                    </div>
+                `).join('');
+            } catch(e){}
+        }
+
+        async function fetchQueue() {
+            const d = await api('/api/admin/queue');
+            renderQueueList(d.items);
+        }
+
+        function renderQueueList(items = []) {
+            const tb = document.getElementById('queueTableBody');
+            if (!items.length) {
+                tb.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-gray-700 italic">Queue Clear. System Idle.</td></tr>';
+                return;
+            }
+            tb.innerHTML = items.map(i => `
+                <tr class="border-b border-white/5 hover:bg-white/5">
+                    <td class="py-2.5 truncate max-w-[150px] font-mono text-gray-400">${i.recipient}</td>
+                    <td class="py-2.5">
+                        <span class="${i.is_priority ? 'text-amber-500' : 'text-gray-500'} text-[7px] font-black">
+                            ${i.is_priority ? '⚡ HIGH' : '⏱ NORMAL'}
+                        </span>
+                    </td>
+                    <td class="py-2.5 text-gray-500 font-mono">${formatDate(i.timestamp)}</td>
+                    <td class="py-2.5 text-right">
+                        <button onclick="cancelQueueItem('${i.id}')" class="text-red-500/50 hover:text-red-500 border border-red-500/10 px-2 py-0.5 rounded uppercase transition-all">Cancel</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function cancelQueueItem(id) {
+            if (confirm("Purge message?")) {
+                const d = await api(`/api/admin/queue/${id}`, 'DELETE');
+                if (d.status === 'success') refreshStats();
+            }
+        }
+
         async function fetchConfig() { 
             const d = await api('/api/admin/settings'); 
             document.getElementById('confWebhook').innerText = d.webhook_url; 
@@ -215,14 +403,19 @@
         function useRecipient(j) { document.getElementById('sendNumber').value = j; switchTab('orchestrator'); }
 
         async function performDispatch() {
-            const n = document.getElementById('sendNumber').value, t = document.getElementById('sendText').value, ty = document.getElementById('sendType').value, f = document.getElementById('sendFile').files[0], b = document.getElementById('dispatchBtn'), m = document.getElementById('dispatchMsg');
+            const n = document.getElementById('sendNumber').value, t = document.getElementById('sendText').value, ty = document.getElementById('sendType').value, f = document.getElementById('sendFile').files[0], p = document.getElementById('sendPriority').checked, dMode = document.getElementById('sendDelivery').value, b = document.getElementById('dispatchBtn'), m = document.getElementById('dispatchMsg');
             if (!n || !t) return; b.innerText = 'FIRING...';
-            const fd = new FormData(); fd.append('number', n); fd.append('text', t); fd.append('type', ty); if (f) fd.append('file', f);
+            const fd = new FormData(); fd.append('number', n); fd.append('text', t); fd.append('type', ty); if (f) fd.append('file', f); fd.append('priority', p); fd.append('delivery', dMode);
             try {
                 const d = await api('/send', 'POST', fd);
-                if (d.status === 'success') { m.innerText = 'SUCCESS'; m.className = 'mt-2 text-green-400'; document.getElementById('sendText').value = ''; }
-                else { m.innerText = 'FAILED'; m.className = 'mt-2 text-red-400'; }
-            } catch (e) { m.innerText = 'ERROR'; } finally { setTimeout(() => b.innerText = 'FIRE MESSAGE', 1000); }
+                if (d.status === 'success') { 
+                    m.innerText = dMode === 'direct' ? 'MESSAGE DISPATCHED' : 'ENQUEUED'; 
+                    m.className = 'mt-2 text-green-400'; 
+                    document.getElementById('sendText').value = ''; 
+                    refreshStats(); 
+                }
+                else { m.innerText = 'FAILED: ' + (d.error || 'Check Link'); m.className = 'mt-2 text-red-400'; }
+            } catch (e) { m.innerText = 'NETWORK ERROR'; } finally { setTimeout(() => b.innerText = 'FIRE MESSAGE', 1000); }
         }
 
         async function renderTemplates() {
@@ -252,21 +445,225 @@
         function applyTpl(t) { document.getElementById('sendText').value = t; switchTab('orchestrator'); }
         function delTpl(i) { const ts = JSON.parse(localStorage.getItem('waTpls')||'[]'); ts.splice(i, 1); localStorage.setItem('waTpls', JSON.stringify(ts)); renderTemplates(); }
 
-        async function fetchLogs() {
-            try {
-                const l = await api('/logs'), list = document.getElementById('logList');
-                list.innerHTML = l.map(log => `
-                <div class="px-2 py-1.5 bg-white/5 rounded text-[8px] font-bold uppercase flex justify-between items-center"><span class="text-gray-500 truncate max-w-[80px]">${log.recipient}</span><span class="${log.status === 'Sent' || log.status === 'Read' || log.status === 'Delivered' ? 'text-green-500' : 'text-red-500'}">${log.status}</span><span class="text-[7px] text-gray-600 font-mono">${formatDate(log.created_at)}</span></div>
-                `).join('');
-            } catch(e){}
+        function showLogDetail(log) {
+            const l = event.target.closest('div');
+            document.getElementById('modalMsg').innerText = log.message || 'No content';
+            document.getElementById('modalStatus').innerText = log.status;
+            document.getElementById('modalTime').innerText = log.timestamp;
+            
+            const ts = new Date(log.timestamp);
+            const d = new Date(Date.UTC(ts.getFullYear(), ts.getMonth(), ts.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            const weekId = `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+            
+            document.getElementById('modalWeeklyId').innerText = log.id + ' @ ' + weekId;
+            
+            const destroyBtn = document.getElementById('destroyRecordBtn');
+            destroyBtn.onclick = async () => {
+                if (confirm('Permanently destroy this audit record?')) {
+                    try {
+                        const res = await fetch(`/api/admin/audit/${log.id}?week=${weekId}`, { 
+                            method: 'DELETE',
+                            headers: { 'x-admin-token': localStorage.getItem('adminToken') }
+                        });
+                        if (res.ok) {
+                            closeModal();
+                            fetchActivityPulse();
+                            fetchAnalytics();
+                        }
+                    } catch(err) {}
+                }
+            };
+
+            document.getElementById('logModal').classList.remove('hidden');
         }
+
+        function closeModal() { document.getElementById('logModal').classList.add('hidden'); }
 
         async function fetchQR() { const d = await api('/session/qr'); if (d.qr) { document.getElementById('qrContainer').classList.remove('hidden'); document.getElementById('qrcode').innerHTML = ''; new QRCode(document.getElementById('qrcode'), { text: d.qr, width: 120, height: 120 }); } }
         async function promptPairing() { const n = prompt("Phone:"); if (n) { const d = await api('/session/pairing-code', 'POST', { number: n }); if (d.code) alert(`Code: ${d.code}`); } }
         async function disconnect() { if (confirm("Terminate?")) { await api('/session/logout', 'POST'); location.reload(); } }
         function logout() { localStorage.removeItem('adminToken'); window.location.href = '/dashboard/'; }
 
-        setInterval(refreshStats, 3000); setInterval(fetchLogs, 5000); refreshStats(); fetchLogs();
+        let globalSystemLogs = [];
+        async function fetchLogDates() {
+            try {
+                const dates = await api('/api/admin/logs/dates');
+                const sel = document.getElementById('logFileSelect');
+                sel.innerHTML = dates.map(d => `<option value="${d}">${d}</option>`).join('');
+                if (dates.length > 0) fetchSystemLogs();
+            } catch(e) {}
+        }
+        
+        async function fetchSystemLogs() {
+            const date = document.getElementById('logFileSelect').value;
+            const level = document.getElementById('logLevelSelect').value;
+            if (!date) return;
+            try {
+                globalSystemLogs = await api(`/api/admin/logs?date=${date}&level=${level}`);
+                document.getElementById('currentLogFile').innerText = date;
+                document.getElementById('deleteLogBtn').classList.remove('hidden');
+                applyLogFilter();
+            } catch(e) {}
+        }
+        
+        function applyLogFilter() {
+            const levelTarget = document.getElementById('logLevelSelect').value;
+            const q = document.getElementById('logSearch').value.toLowerCase();
+            const disp = document.getElementById('systemLogsDisplay');
+            
+            const filtered = globalSystemLogs.filter(log => {
+                const lName = log.level >= 50 ? 'ERROR' : log.level >= 40 ? 'WARN' : log.level >= 30 ? 'INFO' : 'DEBUG';
+                if (levelTarget && lName !== levelTarget && !(levelTarget === 'DEBUG' && log.level < 30)) return false;
+                if (q && !JSON.stringify(log).toLowerCase().includes(q)) return false;
+                return true;
+            });
+            
+            disp.innerHTML = filtered.map(log => {
+                const isErr = log.level >= 50;
+                const isWarn = log.level >= 40 && log.level < 50;
+                const isInfo = log.level >= 30 && log.level < 40;
+                const color = isErr ? 'text-red-400' : isWarn ? 'text-yellow-400' : isInfo ? 'text-green-400' : 'text-gray-500';
+                const lvlName = isErr ? 'ERR' : isWarn ? 'WRN' : isInfo ? 'INF' : 'DBG';
+                const time = new Date(log.time).toLocaleTimeString([], { hour12: false });
+                const msg = log.msg || '';
+                
+                // Copy safe for printing
+                const safeLog = Object.assign({}, log);
+                delete safeLog.level; delete safeLog.time; delete safeLog.msg; delete safeLog.pid; delete safeLog.hostname;
+                const meta = Object.keys(safeLog).length > 0 ? JSON.stringify(safeLog) : '';
+                return `<div class="mb-1 pb-1 border-b border-white/5"><span class="text-gray-500">[${time}]</span> <span class="${color} font-black w-8 inline-block">${lvlName}</span> <span class="text-white">${msg}</span> <span class="text-gray-600">${meta}</span></div>`;
+            }).join('');
+            if (filtered.length === 0) disp.innerHTML = '<div class="text-center py-10 text-gray-600 italic">No logs match the current filters.</div>';
+        }
+
+        async function fetchHardwareVitals() {
+            try {
+                const data = await api('/api/admin/system/hardware');
+                document.getElementById('hwCpu').innerText = data.cpuLoad;
+                document.getElementById('hwMem').innerText = data.memUsage;
+                document.getElementById('hwUptime').innerText = `${data.uptime} Hours`;
+            } catch(e) {}
+        }
+
+        async function fetchAnalytics() {
+            try {
+                const data = await api(`/api/admin/analytics/delivery?days=${currentAnalyticsRange}`);
+                renderDeliveryChart(data);
+            } catch(e) {}
+        }
+
+        let currentAnalyticsRange = 7;
+        function setAnalyticsRange(days) {
+            currentAnalyticsRange = days;
+            document.querySelectorAll('[id^="range-"]').forEach(b => b.classList.remove('wa-bg', 'text-black'));
+            document.getElementById(`range-${days}`).classList.add('wa-bg', 'text-black');
+            fetchAnalytics();
+        }
+
+        function renderDeliveryChart(data) {
+            const svg = document.getElementById('performanceChart');
+            if (!data || data.length === 0) {
+                svg.innerHTML = '<text x="200" y="50" dominant-baseline="middle" text-anchor="middle" fill="#555" font-size="8">NO DATA POINTS</text>';
+                return;
+            }
+
+            const width = 400;
+            const height = 100;
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            svg.setAttribute('preserveAspectRatio', 'none');
+            
+            const paddingX = 0;
+            const paddingY = 15;
+            const contentWidth = width - (paddingX * 2);
+            const contentHeight = height - (paddingY * 2);
+
+            const maxVal = Math.max(...data.map(d => Math.max(d.success, d.failed)), 10);
+            const getX = (i) => (i / (data.length - 1)) * contentWidth + paddingX;
+            const getY = (v) => height - paddingY - (v / maxVal) * contentHeight;
+
+            const sPoints = data.map((d, i) => `${getX(i)},${getY(d.success)}`);
+            const fPoints = data.map((d, i) => `${getX(i)},${getY(d.failed)}`);
+            const hasSuccess = data.some(d => d.success > 0);
+            const hasFailure = data.some(d => d.failed > 0);
+
+            const createPath = (points) => 'M' + points[0] + ' ' + points.slice(1).map(p => 'L' + p).join(' ');
+            const createArea = (points) => createPath(points) + ` L${getX(data.length-1)},${height-paddingY} L${getX(0)},${height-paddingY} Z`;
+
+            svg.innerHTML = `
+                <defs>
+                    <linearGradient id="gradSuccess" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#25D366" stop-opacity="0.3" /><stop offset="100%" stop-color="#25D366" stop-opacity="0" /></linearGradient>
+                    <linearGradient id="gradFailure" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#EF4444" stop-opacity="0.2" /><stop offset="100%" stop-color="#EF4444" stop-opacity="0" /></linearGradient>
+                </defs>
+                <!-- Baseline (Silence) -->
+                <line x1="0" y1="${height - paddingY}" x2="${width}" y2="${height - paddingY}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
+                
+                ${hasSuccess ? `
+                    <path d="${createArea(sPoints)}" fill="url(#gradSuccess)" />
+                    <path d="${createPath(sPoints)}" fill="none" stroke="#25D366" stroke-width="1.5" stroke-linejoin="round" />
+                ` : ''}
+                
+                ${hasFailure ? `
+                    <path d="${createArea(fPoints)}" fill="url(#gradFailure)" />
+                    <path d="${createPath(fPoints)}" fill="none" stroke="#EF4444" stroke-width="1" stroke-dasharray="2,2" stroke-linejoin="round" />
+                ` : ''}
+                
+                ${data.map((d, i) => `
+                    <circle cx="${getX(i)}" cy="${getY(d.success)}" r="3" fill="transparent" class="cursor-pointer group/node" 
+                        onmouseover="showTooltip(event, '${d.day}', ${d.success}, ${d.failed})" onmouseout="hideTooltip()">
+                    </circle>
+                `).join('')}
+            `;
+        }
+
+        function showTooltip(e, day, s, f) {
+            const tt = document.getElementById('chartTooltip');
+            const container = document.getElementById('chartContainer').getBoundingClientRect();
+            tt.innerHTML = `
+                <div class="font-black border-b border-white/10 pb-1 mb-1">${day}</div>
+                <div class="flex gap-2">
+                    <span class="text-green-500">${s} Success</span>
+                    <span class="text-red-500">${f} Failed</span>
+                </div>
+            `;
+            tt.classList.remove('opacity-0');
+            const x = e.clientX - container.left;
+            const y = e.clientY - container.top - 40;
+            tt.style.left = `${Math.min(x, container.width - 80)}px`;
+            tt.style.top = `${Math.max(y, 0)}px`;
+        }
+
+        function hideTooltip() {
+            document.getElementById('chartTooltip').classList.add('opacity-0');
+        }
+
+        async function deleteCurrentLogFile() {
+            const date = document.getElementById('logFileSelect').value;
+            const level = document.getElementById('logLevelSelect').value;
+            if (confirm(`⚠️ PERMANENT DELETION: Are you sure you want to destroy the ${level} log file for ${date}? This cannot be undone.`)) {
+                try {
+                    const res = await fetch(`/api/admin/logs?date=${date}&level=${level}`, { 
+                        method: 'DELETE',
+                        headers: { 'x-admin-token': localStorage.getItem('adminToken') }
+                    });
+                    if (res.ok) {
+                        alert(`Log file for ${date} has been purged.`);
+                        fetchLogDates(); // Refresh the list
+                    }
+                } catch(e) {}
+            }
+        }
+
+        setInterval(refreshStats, 3000); 
+        setInterval(fetchActivityPulse, 5000); 
+        setInterval(fetchHardwareVitals, 5000);
+        setInterval(fetchAnalytics, 300000); 
+        refreshStats(); 
+        fetchActivityPulse();
+        fetchHardwareVitals();
+        fetchAnalytics();
     </script>
 </body>
 </html>

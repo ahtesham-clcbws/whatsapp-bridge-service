@@ -1,400 +1,43 @@
 /**
- * WhatsApp Bridge Service - API Server
- * ------------------------------------
- * This module provides a multipart/form-data HTTP interface to 
- * interact with the linked WhatsApp account. It handles multi-media 
- * uploads, batch sequencing, and session management.
+ * WhatsApp Bridge Service - API Server [v3.7.0]
+ * ------------------------------------------------
+ * Core entry point for the bridge service. Orchestrates modular 
+ * routers for authentication, session management, and messaging.
  * 
  * @author Ahtesham
  * @license MIT
  */
 
 const express = require('express');
-const multer = require('multer');
-const { 
-    sendBatch, 
-    isWhatsAppConnected, 
-    getLatestQR, 
-    getPairingCode, 
-    logoutSession,
-    getAllGroups
-} = require('./whatsapp');
-const { getRecentLogs, getDatabase, getSystemDatabase } = require('./database');
-const pino = require('pino');
-require('dotenv').config();
-
-const logger = pino({ level: 'info' });
-const app = express();
 const path = require('path');
-const crypto = require('crypto');
+const logger = require('./logger');
 
-// --- Global State for v3.0 Admin Dashboard ---
-// Persistent v3.2: MFA & Sessions migrated to system.db
+const app = express();
 const port = process.env.PORT || 3001;
-const apiKey = process.env.API_KEY;
 
-// Middleware: Multipart form handling for large attachments (In-Memory)
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: process.env.MAX_FILE_SIZE || 50 * 1024 * 1024 }
-});
+// Global Middleware (Standard JSON parsing - only handles application/json)
+app.use(express.json());
 
-// Middleware: Global body parsing (Forces JSON parsing even if headers are missing)
-app.use(express.json({ type: () => true }));
-
-// --- v3.0 Static Dashboard Engine ---
+// --- Static Dashboard Engine ---
 app.use('/dashboard', express.static(path.join(__dirname, '..', 'public')));
 app.get('/dashboard/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
 
-/**
- * Flexible Authorization Middleware: Accepts either a valid API_KEY 
- * or a valid Dashboard Session Token.
- */
-const flexibleAuth = async (req, res, next) => {
-    const providedKey = req.body?.apiKey || req.query.apiKey || req.headers['x-api-key'];
-    const adminToken = req.headers['x-admin-token'];
+// --- Modular Route Injections ---
+const authRoutes = require('./routes/auth');
+const sessionRoutes = require('./routes/session');
+const adminRoutes = require('./routes/admin');
+const messageRoutes = require('./routes/message');
 
-    // Check Dashboard Session First (Persistent v3.2)
-    if (adminToken) {
-        const sysDb = await getSystemDatabase();
-        const session = await new Promise((resolve) => {
-            sysDb.get(`SELECT * FROM admin_sessions WHERE token = ? AND expires_at > CURRENT_TIMESTAMP`, [adminToken], (err, row) => {
-                if (err) resolve(null); else resolve(row);
-            });
-        });
-        if (session) return next();
-    }
+// 1. Auth & Session (Public/MFA - MUST be above root middleware)
+app.use('/api/auth', authRoutes);
+app.use('/session', sessionRoutes);
 
-    // Fallback to API_KEY
-    if (providedKey && providedKey === apiKey) {
-        return next();
-    }
+// 2. High-Priority Messaging Layer (Mounted at root)
+app.use('/', messageRoutes);
 
-    res.status(401).json({ error: 'Unauthorized: Valid Session Token or API Key required.' });
-};
-
-// --- v3.0 Authentication & MFA Endpoints ---
-
-/**
- * Request Dashboard Access (MFA)
- * POST /api/auth/request
- */
-app.post('/api/auth/request', async (req, res) => {
-    try {
-        // If not connected, allow access via API_KEY for setup
-        if (!isWhatsAppConnected()) {
-            const bodyKey = req.body?.apiKey;
-            if (bodyKey && bodyKey === apiKey) {
-                const setupToken = crypto.randomUUID();
-                sessions.add(setupToken);
-                return res.json({ status: 'setup', token: setupToken, message: 'Bridge offline. Setup mode active.' });
-            }
-            return res.status(401).json({ error: 'Auth Required: Provide API_KEY to access setup mode.' });
-        }
-
-        // If connected, trigger WhatsApp OTP
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const tokenHash = crypto.randomUUID();
-        const expires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-        
-        const sysDb = await getSystemDatabase();
-        await new Promise((resolve, reject) => {
-            sysDb.run(`INSERT INTO auth_attempts (attempt_token, code, expires_at, ip) VALUES (?, ?, ?, ?)`, 
-                [tokenHash, code, expires, req.ip], (err) => err ? reject(err) : resolve());
-        });
-
-        await require('./whatsapp').sendAuthCode(code);
-        res.json({ status: 'pending', attemptToken: tokenHash, message: 'OTP sent to your WhatsApp.' });
-    } catch (err) {
-        logger.error('MFA Request Error:', err);
-        res.status(500).json({ error: 'Failed to trigger MFA.' });
-    }
-});
-
-/**
- * Verify Dashboard OTP
- * POST /api/auth/verify
- */
-app.post('/api/auth/verify', async (req, res) => {
-    const { attemptToken, code } = req.body;
-    const sysDb = await getSystemDatabase();
-
-    const attempt = await new Promise((resolve) => {
-        sysDb.get(`SELECT * FROM auth_attempts WHERE attempt_token = ? AND code = ? AND expires_at > CURRENT_TIMESTAMP`, 
-            [attemptToken, code], (err, row) => resolve(row));
-    });
-
-    if (attempt) {
-        const sessionToken = crypto.randomUUID();
-        const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 day persistent session
-        
-        await new Promise((resolve) => {
-            sysDb.run(`INSERT INTO admin_sessions (token, expires_at) VALUES (?, ?)`, [sessionToken, expires], () => resolve());
-            sysDb.run(`DELETE FROM auth_attempts WHERE attempt_token = ?`, [attemptToken]);
-        });
-        
-        res.json({ status: 'success', token: sessionToken });
-    } else {
-        res.status(401).json({ error: 'Invalid or expired code.' });
-    }
-});
-
-// --- Session Management Endpoints ---
-
-/**
- * Connectivity Check
- * GET /session/status
- */
-app.get('/session/status', flexibleAuth, (req, res) => {
-    res.json({ connected: isWhatsAppConnected() });
-});
-
-/**
- * Fetch Current QR Code (Remote Pairing)
- * GET /session/qr
- */
-app.get('/session/qr', flexibleAuth, (req, res) => {
-    const qr = getLatestQR();
-    if (isWhatsAppConnected()) return res.json({ message: 'Already connected' });
-    if (!qr) return res.status(404).json({ error: 'QR code not yet available. Wait a few seconds.' });
-    res.json({ qr });
-});
-
-/**
- * Request Account Pairing Code (8-digit)
- * POST /session/pairing-code
- */
-app.post('/session/pairing-code', flexibleAuth, async (req, res) => {
-    try {
-        const { number } = req.body;
-        if (!number) return res.status(400).json({ error: 'Phone number is required for pairing.' });
-        
-        const code = await getPairingCode(number);
-        res.json({ code });
-    } catch (err) {
-        logger.error('Pairing Error:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-/**
- * Retrieve all Groups (ID + Name)
- * GET /session/groups
- */
-app.get('/session/groups', flexibleAuth, async (req, res) => {
-    try {
-        const groups = await getAllGroups();
-        res.json(groups);
-    } catch (err) {
-        logger.error('Group Fetch Error:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-/**
- * Session Disconnect / Clear State
- * POST /session/logout
- */
-app.post('/session/logout', flexibleAuth, async (req, res) => {
-    try {
-        const adminToken = req.headers['x-admin-token'];
-        if (adminToken) {
-            const sysDb = await getSystemDatabase();
-            await new Promise(r => sysDb.run(`DELETE FROM admin_sessions WHERE token = ?`, [adminToken], () => r()));
-        }
-        await logoutSession();
-        res.json({ status: 'success', message: 'Session disconnected and cleared.' });
-    } catch (err) {
-        logger.error('Logout Error:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-/**
- * Admin Telemetry + System Vitals
- * GET /api/admin/stats
- */
-app.get('/api/admin/stats', flexibleAuth, async (req, res) => {
-    try {
-        const db = await getDatabase();
-        const os = require('os');
-        
-        const stats = await new Promise((resolve, reject) => {
-            db.all(`SELECT COUNT(*) as total, SUM(CASE WHEN status IN ('Sent','Read','Delivered') THEN 1 ELSE 0 END) as success, SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) as failed, SUM(retry_count) as retries FROM audit_logs`, [], (err, rows) => {
-                if (err) reject(err); else resolve(rows[0]);
-            });
-        });
-
-        res.json({
-            status: 'success',
-            vitals: {
-                uptime: Math.floor(process.uptime()),
-                connected: isWhatsAppConnected(),
-                cpu_load: os.loadavg()[0].toFixed(2),
-                ram_usage: ((1 - os.freemem() / os.totalmem()) * 100).toFixed(0),
-                version: '3.0.0'
-            },
-            metrics: {
-                total_dispatched: stats.total || 0,
-                success_count: stats.success || 0,
-                failure_count: stats.failed || 0,
-                retry_volume: stats.retries || 0
-            }
-        });
-    } catch (err) {
-        logger.error('Stats Error:', err);
-        res.status(500).json({ error: 'Telemetry Failure.' });
-    }
-});
-
-/**
- * Global Template Directory
- * GET /api/admin/templates
- */
-app.get('/api/admin/templates', flexibleAuth, (req, res) => {
-    try {
-        const templates = require('./templates.json');
-        res.json(templates);
-    } catch (e) {
-        res.json([]);
-    }
-});
-/**
- * Remote System Maintenance
- */
-app.post('/api/admin/system/update', flexibleAuth, (req, res) => {
-    const { exec } = require('child_process');
-    exec('git pull origin master', (err, stdout, stderr) => {
-        if (err) return res.status(500).json({ status: 'error', message: err.message, log: stderr });
-        res.json({ status: 'success', message: 'Repository Synchronized.', log: stdout });
-    });
-});
-
-app.post('/api/admin/system/reboot', flexibleAuth, async (req, res) => {
-    res.json({ status: 'success', message: 'Service rebooting... Syncing session.' });
-    setTimeout(() => {
-        logger.info('Maintenance Reboot Triggered via Admin Panel.');
-        process.exit(0);
-    }, 2000);
-});
-
-/**
- * Dynamic Configuration Management
- * GET /api/admin/settings
- */
-app.get('/api/admin/settings', flexibleAuth, (req, res) => {
-    res.json({
-        webhook_url: process.env.WEBHOOK_URL || 'Not Set',
-        max_retries: process.env.MAX_RETRIES || 3,
-        file_limit: process.env.MAX_FILE_SIZE || '50MB',
-        node_version: process.version,
-        platform: process.platform
-    });
-});
-
-/**
- * Audit Log Retreival
- * GET /logs
- */
-app.get('/logs', flexibleAuth, async (req, res) => {
-    try {
-        const logs = await getRecentLogs(50);
-        res.json(logs);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to access audit logs.' });
-    }
-});
-
-/**
- * Service Heartbeat / Health Check
- */
-app.get('/health', async (req, res) => {
-    res.json({
-        status: 'online',
-        whatsapp: isWhatsAppConnected() ? 'connected' : 'disconnected',
-        uptime: Math.floor(process.uptime()),
-        version: '3.0.0',
-        timestamp: new Date().toISOString()
-    });
-});
-
-// --- Unified Messaging Endpoint ---
-
-/**
- * Dispatch Hub
- * POST /send (Multipart/Form-Data or JSON)
- */
-app.post('/send', flexibleAuth, (req, res, next) => {
-    // Only trigger multer if the request is multipart/form-data
-    if (req.headers['content-type']?.includes('multipart')) {
-        return upload.any()(req, res, next);
-    }
-    next();
-}, async (req, res) => {
-    try {
-        // logger.info({ body: req.body, headers: req.headers }, 'Incoming dispatch request');
-
-        if (!isWhatsAppConnected()) {
-            return res.status(503).json({ error: 'Service unavailable. WhatsApp not linked.' });
-        }
-
-        // Support both JSON body and Multipart form fields
-        const number = req.body.number || req.query.number;
-        const types = req.body.type || req.query.type;
-        const texts = req.body.text || req.query.text;
-        const files = req.files || [];
-
-        if (!number) return res.status(400).json({ error: 'Recipient identifier (number or @g.us JID) is mandatory.' });
-
-        // Parsing logic to handle literal \n sequences often sent via HTTP clients
-        const typeArr = Array.isArray(types) ? types : [types];
-        const textArr = (Array.isArray(texts) ? texts : [texts]).map(t => 
-            typeof t === 'string' ? t.replace(/\\n/g, '\n') : t
-        );
-
-        const batchItems = [];
-        let fileIndex = 0;
-
-        // Loop through the arrays and build the sequential queue
-        for (let i = 0; i < typeArr.length; i++) {
-            const currentType = typeArr[i];
-            const currentText = textArr[i] || '';
-
-            if (currentType === 'text') {
-                batchItems.push({ type: 'text', text: currentText });
-            } else {
-                const currentFile = files[fileIndex++];
-                if (!currentFile) continue;
-                batchItems.push({ 
-                    type: currentType, 
-                    text: currentText, 
-                    buffer: currentFile.buffer, 
-                    filename: currentFile.originalname 
-                });
-            }
-        }
-        
-        // Logging the dispatch attempt to SQLite (Current Week)
-        const db = await getDatabase();
-        db.run(
-            `INSERT INTO audit_logs (recipient, status, type, metadata) VALUES (?, ?, ?, ?)`, 
-            [number, 'Scheduled', typeArr.join(','), JSON.stringify({ count: batchItems.length })],
-            function(err) {
-                if (err) return logger.error('Audit Log Insertion Error:', err);
-                
-                // Process in background with log awareness
-                sendBatch(number, batchItems, this.lastID).catch(err => 
-                    logger.error('Async Batch Error:', err)
-                );
-            }
-        );
-
-        res.json({ status: 'success', message: 'Batch dispatch scheduled successfully.', recipient: number });
-    } catch (err) {
-        logger.error('API Server Error:', err);
-        res.status(500).json({ error: 'Internal Bridge Failure.' });
-    }
-});
+// 3. Admin & System
+app.use('/api/admin', adminRoutes);
+app.get('/logs', adminRoutes); 
 
 /**
  * Global Error Handler: Catches JSON parsing errors and middleware failures.
@@ -402,8 +45,9 @@ app.post('/send', flexibleAuth, (req, res, next) => {
 app.use((err, req, res, next) => {
     logger.error({ err: err.message, stack: err.stack }, 'Global Request Error');
     res.status(err.status || 500).json({ 
-        error: 'Middleware/Parser Error', 
-        message: err.message 
+        error: 'Server Error', 
+        message: err.message,
+        type: err.constructor.name
     });
 });
 
@@ -412,7 +56,7 @@ app.use((err, req, res, next) => {
  */
 function startServer() {
     app.listen(port, () => {
-        logger.info(`WhatsApp Bridge API is listening at http://localhost:${port}`);
+        logger.info(`WhatsApp Bridge is listening at http://localhost:${port}`);
     });
 }
 

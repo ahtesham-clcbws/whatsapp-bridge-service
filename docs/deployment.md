@@ -229,5 +229,47 @@ Localtunnel requires a header to skip its intervention page. Add this to your AP
 
 ---
 
+## 🆙 8. Modernizing Your Bridge (v3.7.0 Update)
+
+If you are running an older version (v1.x or v2.x), follow these steps to upgrade to the latest enterprise-grade features. 
+
+> [!IMPORTANT]
+> **Backup your session!** Before any update, ensure you have a copy of your `auth/` directory. This contains your WhatsApp link data.
+
+### Option A: The Automated Upgrade (Recommended)
+We provide a simple script to handle the backup, code pull, and restart automatically.
+
+```bash
+# Run the official upgrade script
+chmod +x scripts/upgrade.sh
+./scripts/upgrade.sh
+```
+
+### Option B: The Manual Upgrade
+If you prefer to run commands manually or use a custom git setup:
+
+1.  **Stop the Service**:
+    ```bash
+    pm2 stop wa-bridge
+    ```
+2.  **Pull Latest Code**:
+    ```bash
+    git fetch --all
+    git reset --hard origin/master
+    ```
+3.  **Refresh Dependencies**:
+    ```bash
+    npm install
+    ```
+4.  **Verify & Restart**:
+    ```bash
+    pm2 start wa-bridge
+    ```
+
+### Post-Update Verification
+Once updated, visit your Admin Dashboard and check the footer. It should report **v3.7.0**. Your existing templates and logs will be preserved automatically.
+
+---
+
 > [!IMPORTANT]
 > **Backup your session!** Always keep a copy of the `auth/` folder. If you move servers, simply copy this folder to the new one to avoid re-scanning the QR code.
