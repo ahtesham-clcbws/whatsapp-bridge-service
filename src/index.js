@@ -1,3 +1,6 @@
+if (typeof globalThis.crypto === 'undefined') {
+    globalThis.crypto = require('node:crypto').webcrypto;
+}
 require('dotenv').config();
 /**
  * WhatsApp Bridge Service - Bootstrapper

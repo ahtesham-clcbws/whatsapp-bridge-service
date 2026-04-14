@@ -4,6 +4,11 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+// Polyfill randomUUID for Node < 15.6.0
+if (!crypto.randomUUID) {
+    crypto.randomUUID = () => require('crypto').randomBytes(16).toString('hex');
+}
+
 const { isWhatsAppConnected, sendAuthCode } = require('../whatsapp');
 const { getSystemDatabase } = require('../database');
 const logger = require('../logger');
