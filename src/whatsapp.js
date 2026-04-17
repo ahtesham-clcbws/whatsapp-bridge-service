@@ -220,13 +220,11 @@ async function connectToWhatsApp() {
         browser: Browsers.macOS('Desktop'),
         syncFullHistory: false,
         shouldSyncHistoryMessage: () => false,
-        connectTimeoutMs: 120000,
-        defaultQueryTimeoutMs: 120000,
+        connectTimeoutMs: 180000,
+        defaultQueryTimeoutMs: 180000,
         retryRequestDelayMs: 5000,
         markOnlineOnConnect: false,
-        getMessage: async (key) => {
-            return { conversation: 'Bridge Syncing...' };
-        }
+        fireInitQueries: false // Skip heavy initial queries logic
     });
 
     sock.ev.on('creds.update', saveCreds);

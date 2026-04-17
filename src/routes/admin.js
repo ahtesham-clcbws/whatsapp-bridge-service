@@ -35,7 +35,7 @@ router.get('/stats', async (req, res) => {
                 connected: isWhatsAppConnected(),
                 cpu_load: os.loadavg()[0].toFixed(2),
                 ram_usage: ((1 - os.freemem() / os.totalmem()) * 100).toFixed(0),
-                version: '3.8.4',
+                version: '3.8.5',
                 queue: getQueueStatus()
             },
             metrics: {

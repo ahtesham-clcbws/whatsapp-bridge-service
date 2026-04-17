@@ -47,7 +47,7 @@ The bridge can notify your external backend service in real-time when events occ
 }
 ```
 
-## 🧩 Administrative Endpoints (v3.8.4)
+## 🧩 Administrative Endpoints (v3.8.5)
 
 Beyond standard messaging, the bridge provides a suite of administrative tools for telemetry and data management. These require the `x-admin-token` header.
 
@@ -127,7 +127,7 @@ Returns the current vitals of the bridge service. (Does not require API_KEY for 
   "status": "online",
   "whatsapp": "connected",
   "uptime": 12450,
-  "version": "3.8.4",
+  "version": "3.8.5",
   "timestamp": "2026-04-10T10:00:00.000Z"
 }
 ```

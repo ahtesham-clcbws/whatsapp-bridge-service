@@ -229,7 +229,7 @@ Localtunnel requires a header to skip its intervention page. Add this to your AP
 
 ---
 
-## 🆙 8. Modernizing Your Bridge (v3.8.4 Update)
+## 🆙 8. Modernizing Your Bridge (v3.8.5 Update)
 
 If you are running an older version (v1.x or v2.x), follow these steps to upgrade to the latest enterprise-grade features. 
 
@@ -267,7 +267,7 @@ If you prefer to run commands manually or use a custom git setup:
     ```
 
 ### Post-Update Verification
-Once updated, visit your Admin Dashboard and check the footer. It should report **v3.8.4**. Your existing templates and logs will be preserved automatically.
+Once updated, visit your Admin Dashboard and check the footer. It should report **v3.8.5**. Your existing templates and logs will be preserved automatically.
 
 ---
 

@@ -24,7 +24,7 @@ router.get('/health', (req, res) => {
         status: 'online',
         whatsapp: isWhatsAppConnected() ? 'connected' : 'disconnected',
         uptime: Math.floor(process.uptime()),
-        version: '3.8.4',
+        version: '3.8.5',
         timestamp: new Date().toISOString()
     });
 });
