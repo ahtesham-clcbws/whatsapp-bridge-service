@@ -9,14 +9,14 @@ This project is the result of a collaborative partnership between human architec
 ## 👨‍💻 Lead Architect
 **Ahtesham**  
 *Full Stack Developer & Systems Designer*  
-The primary visionary behind the **WhatsApp Bridge Service**. Ahtesham designed the modular architecture, defined the high-level API requirements, and established the weekly-rotated persistence strategy. His focus on "Enterprise Transparency" led to the creation of the v3.8.2 administrative purging suite.
+The primary visionary behind the **WhatsApp Bridge Service**. Ahtesham designed the modular architecture, defined the high-level API requirements, and established the weekly-rotated persistence strategy. His focus on "Enterprise Transparency" led to the creation of the v3.8.3 administrative purging suite.
 
 ---
 
 ## 🤖 AI Pair Programmer
 **Antigravity**  
 *Advanced Coding Agent (Google DeepMind)*  
-The primary coding assistant and technical implementer. Antigravity assisted in the complex Baileys integration, hardened the API security layers, and implemented the real-time modular router system (v3.8.2).
+The primary coding assistant and technical implementer. Antigravity assisted in the complex Baileys integration, hardened the API security layers, and implemented the real-time modular router system (v3.8.3).
 
 ---
 

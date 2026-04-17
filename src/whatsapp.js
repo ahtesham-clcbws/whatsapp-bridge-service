@@ -220,8 +220,10 @@ async function connectToWhatsApp() {
         browser: Browsers.macOS('Desktop'),
         syncFullHistory: false,
         shouldSyncHistoryMessage: () => false,
-        connectTimeoutMs: 90000,
-        defaultQueryTimeoutMs: 90000,
+        connectTimeoutMs: 120000,
+        defaultQueryTimeoutMs: 120000,
+        retryRequestDelayMs: 5000,
+        markOnlineOnConnect: false,
         getMessage: async (key) => {
             return { conversation: 'Bridge Syncing...' };
         }
@@ -454,7 +456,7 @@ async function sendBatch(recipient, items, logId) {
                     attempt++;
                     if (attempt <= maxRetries) {
                         logger.warn(`[BRIDGE] Direct retry ${attempt} for ${recipient}: ${err.message}`);
-                        await new Promise(resolve => setTimeout(resolve, retryDelays[attempt - 1] || 5000));
+                        await new Promise(resolve => setTimeout(resolve, 8000));
                     }
                 }
             }

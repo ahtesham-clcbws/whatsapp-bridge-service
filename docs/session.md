@@ -1,4 +1,4 @@
-# Remote Session Management (v3.8.2)
+# Remote Session Management (v3.8.3)
 
 The service is designed to be fully manageable from the **Integrated Admin Dashboard** or via external API integrations.
 
@@ -29,7 +29,7 @@ To link your WhatsApp account, use the **Dashboard Pairing View** (recommended) 
 ### The `auth/` Directory
 All session credentials are encrypted and stored in the root `auth/` directory. 
 - **Persistence**: Once linked, the bridge will auto-reconnect on restart.
-- **MFA Protection**: In v3.8.2, all session management functions via the dashboard are protected by **WhatsApp-Native MFA**. Attempts to logout or fetch QR strings require a valid OTP.
+- **MFA Protection**: In v3.8.3, all session management functions via the dashboard are protected by **WhatsApp-Native MFA**. Attempts to logout or fetch QR strings require a valid OTP.
 
 ---
 
