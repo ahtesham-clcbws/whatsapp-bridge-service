@@ -24,7 +24,7 @@ router.get('/health', (req, res) => {
         status: 'online',
         whatsapp: isWhatsAppConnected() ? 'connected' : 'disconnected',
         uptime: Math.floor(process.uptime()),
-        version: '3.8.0',
+        version: '3.8.1',
         timestamp: new Date().toISOString()
     });
 });
@@ -105,7 +105,7 @@ router.post('/send', (req, res, next) => {
         const db = await getDatabase();
         db.run(
             `INSERT INTO audit_logs (recipient, status, type, metadata) VALUES (?, ?, ?, ?)`, 
-            [number, isQueuedMode ? 'Queued' : 'Direct', typeArr.join(','), JSON.stringify({ count: batchItems.length })],
+            [number, isQueuedMode ? 'Queued' : 'Failed', typeArr.join(','), JSON.stringify({ count: batchItems.length, mode: isQueuedMode ? 'Throttled' : 'Priority' })],
             function(err) {
                 if (err) return logger.error('Audit Log Insertion Error:', err);
                 const auditId = this.lastID;

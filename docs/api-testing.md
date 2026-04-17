@@ -4,15 +4,15 @@ This guide provides a **Full Postman Collection JSON** that you can copy, save, 
 
 ---
 
-## 📥 Direct Import Collection (v3.8.0)
+## 📥 Direct Import Collection (v3.8.1)
 Copy the JSON block below, save it as `whatsapp-bridge-v3.7.json` on your computer, and import it into Postman.
 
 ```json
 {
 	"info": {
 		"_postman_id": "wa-bridge-v3-7",
-		"name": "WhatsApp Bridge Service (v3.8.0)",
-		"description": "Comprehensive collection for testing v3.8.0 features: Messaging, MFA Auth, Session Management, and Administrative Purging.",
+		"name": "WhatsApp Bridge Service (v3.8.1)",
+		"description": "Comprehensive collection for testing v3.8.1 features: Messaging, MFA Auth, Session Management, and Administrative Purging.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [

@@ -218,8 +218,13 @@ async function connectToWhatsApp() {
         printQRInTerminal: false,
         logger,
         browser: Browsers.macOS('Desktop'),
-        connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 60000
+        syncFullHistory: false,
+        shouldSyncHistoryMessage: () => false,
+        connectTimeoutMs: 90000,
+        defaultQueryTimeoutMs: 90000,
+        getMessage: async (key) => {
+            return { conversation: 'Bridge Syncing...' };
+        }
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -460,8 +465,20 @@ async function sendBatch(recipient, items, logId) {
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     } catch (err) {
-        logger.error(`Dispatch Failed for ${recipient} after retries:`, err);
-        if (logId) db.run(`UPDATE audit_logs SET status = ?, error = ? WHERE id = ?`, ['Failed', err.message, logId]);
+        // Only log serious failures, ignore status updates decryption issues
+        if (!recipient.includes('status@broadcast')) {
+            logger.error(`Dispatch Failed for ${recipient} after retries: ${err.message}`);
+        }
+        
+        if (logId) {
+            try {
+                const { getDatabase } = require('./database');
+                const db = await getDatabase();
+                db.run(`UPDATE audit_logs SET status = ?, error = ? WHERE id = ?`, ['Failed', err.message, logId]);
+            } catch (dbErr) {
+                logger.error('Failed to update audit log on dispatch error:', dbErr.message);
+            }
+        }
     }
 }
 
