@@ -35,7 +35,7 @@ features:
 ## 🏆 The v3.x Era (Current)
 
 - [x] **v3.7.0: Admin Purge & Analytics** - Administrative data purging (Logs & Audits) and Premium Analytics (7D/30D/90D) with floating telemetry.
-- [x] **v3.8.3: Stability & Diagnostics** - Presence Warm-up (iPhone Fix), Universal Console Logging, and Failure Reporting Dashboard.
+- [x] **v3.8.4: Stability & Diagnostics** - Presence Warm-up (iPhone Fix), Universal Console Logging, and Failure Reporting Dashboard.
 
 ## 🗺️ Strategic Roadmap
 

@@ -440,6 +440,10 @@ async function sendBatch(recipient, items, logId) {
                 logger.warn(`Presence update failed for ${jid}: ${pErr.message}`);
             }
 
+            let attempt = 0;
+            let success = false;
+            let lastError = null;
+
             while (attempt <= maxRetries && !success) {
                 try {
                     const sentMsg = await sock.sendMessage(jid, messagePayload);
