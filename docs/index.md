@@ -34,10 +34,8 @@ features:
 
 ## 🏆 The v3.x Era (Current)
 
-- [x] **v3.0.0: Admin Command Center** - Feature-complete UI with System Hardware Vitals and Template Vaults.
-- [x] **v3.0.0: WhatsApp Native MFA** - Secure, password-less entry using dynamic codes sent to your personal WhatsApp.
-- [x] **v3.1.0: Intelligent Throttling** - Stateful Database Queue throttling engine to mimic human typing behaviors and pace bulk sends.
-- [x] **v3.7.0** - Administrative data purging (Logs & Audits) and Premium Analytics (7D/30D/90D) with floating telemetry.
+- [x] **v3.7.0: Admin Purge & Analytics** - Administrative data purging (Logs & Audits) and Premium Analytics (7D/30D/90D) with floating telemetry.
+- [x] **v3.8.0: Stability & Diagnostics** - Presence Warm-up (iPhone Fix), SQLite Connection Pooling, and Failure Reporting Dashboard.
 
 ## 🗺️ Strategic Roadmap
 

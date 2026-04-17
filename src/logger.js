@@ -23,34 +23,55 @@ const streams = [
     { level: 'info', stream: process.stdout }
 ];
 
-// Create a filtered stream for each level to prevent duplication
-levels.forEach(lvl => {
-    const logPath = path.join(logDir, `bridge-${lvl}-${dateStr}.log`);
-    const writeStream = fs.createWriteStream(logPath, { flags: 'a' });
-    
-    // Pino level numbers: trace=10, debug=20, info=30, warn=40, error=50, fatal=60
+// Memory cache for active level-specific write streams
+const activeFileStreams = {};
+let lastDateStr = getFormattedDate();
+
+/**
+ * Retrieves or initializes a filtered file stream for a specific log level.
+ * Features auto-rotation: if the date changes, it closes old streams and starts new ones.
+ * 
+ * @param {string} lvl - The log level (info, warn, error, debug).
+ * @returns {Object} A pino-compatible stream object.
+ */
+function createPartitionedStream(lvl) {
     const lvlNum = pino.levels.values[lvl] || 30;
-    
-    streams.push({
-        level: lvl,
-        stream: {
-            write: (str) => {
-                try {
-                    const log = JSON.parse(str);
-                    // Strict filtering: only write if level matches exactly
-                    // This prevents info logs from showing up in warn/error files etc.
-                    if (log.level === lvlNum) {
-                        writeStream.write(str);
-                    } else if (lvl === 'debug' && log.level <= 20) {
-                        // Debug file captures both trace (10) and debug (20)
-                        writeStream.write(str);
-                    }
-                } catch (e) {
-                    // Fallback to writing anyway if JSON parse fails (shouldn't happen with pino)
-                    writeStream.write(str);
+
+    return {
+        write: (str) => {
+            const nowDateStr = getFormattedDate();
+            
+            // Auto-rotation logic
+            if (nowDateStr !== lastDateStr) {
+                Object.keys(activeFileStreams).forEach(key => {
+                    activeFileStreams[key].end();
+                    delete activeFileStreams[key];
+                });
+                lastDateStr = nowDateStr;
+            }
+
+            if (!activeFileStreams[lvl]) {
+                const logPath = path.join(logDir, `bridge-${lvl}-${nowDateStr}.log`);
+                activeFileStreams[lvl] = fs.createWriteStream(logPath, { flags: 'a' });
+            }
+
+            try {
+                const log = JSON.parse(str);
+                if (log.level === lvlNum || (lvl === 'debug' && log.level <= 20)) {
+                    activeFileStreams[lvl].write(str);
                 }
+            } catch (e) {
+                activeFileStreams[lvl].write(str);
             }
         }
+    };
+}
+
+// Initialize streams for each supported level
+levels.forEach(lvl => {
+    streams.push({
+        level: lvl,
+        stream: createPartitionedStream(lvl)
     });
 });
 

@@ -24,6 +24,7 @@ require('dotenv').config();
 let sock;
 let isConnected = false;
 let latestQR = null;
+let heartbeatInterval = null; 
 
 /**
  * Intelligent Message Throttling & Queue Manager
@@ -39,12 +40,22 @@ class MessageQueue {
      */
     async enqueue(recipient, items, isPriority = false, auditId = null) {
         const sysDb = await getSystemDatabase();
-        // We store the batch items as a JSON payload. 
-        // If there are multiple items in a batch, we'll process them as a single queue entry.
+        
+        // PERFORMANCE FIX: Handle large buffers separately as BLOBs
+        // This prevents JSON.stringify from creating massive memory-heavy strings
+        let primaryBuffer = null;
+        const sanitizedItems = items.map(item => {
+            if (item.buffer && !primaryBuffer) {
+                primaryBuffer = item.buffer;
+                return { ...item, buffer: '##PRIMARY_BLOB##' };
+            }
+            return item;
+        });
+
         return new Promise((resolve, reject) => {
             sysDb.run(
-                `INSERT INTO pending_queue (recipient, payload, is_priority, audit_id) VALUES (?, ?, ?, ?)`,
-                [recipient, JSON.stringify(items), isPriority ? 1 : 0, auditId],
+                `INSERT INTO pending_queue (recipient, payload, buffer, is_priority, audit_id) VALUES (?, ?, ?, ?, ?)`,
+                [recipient, JSON.stringify(sanitizedItems), primaryBuffer, isPriority ? 1 : 0, auditId],
                 function(err) {
                     if (err) return reject(err);
                     resolve(this.lastID);
@@ -123,9 +134,11 @@ class MessageQueue {
             const content = item.text || item.msg;
             const isPdf = (item.filename || '').toLowerCase().endsWith('.pdf');
 
-            // CRITICAL FIX: Reconstruct Buffer from JSON-serialized format
+            // PERFORMANCE FIX: Reconstruct Buffer from BLOB or JSON
             let dataBuffer = item.buffer;
-            if (dataBuffer && typeof dataBuffer === 'object' && dataBuffer.type === 'Buffer') {
+            if (dataBuffer === '##PRIMARY_BLOB##') {
+                dataBuffer = queueItem.buffer;
+            } else if (dataBuffer && typeof dataBuffer === 'object' && dataBuffer.type === 'Buffer') {
                 dataBuffer = Buffer.from(dataBuffer.data);
             }
 
@@ -140,6 +153,15 @@ class MessageQueue {
                 case 'text': messagePayload = { text: content }; break;
                 default: continue;
             }
+
+            // [SYNC WARMUP] Send composing presence to force E2E key exchange
+            try {
+                await sock.sendPresenceUpdate('composing', jid);
+                await new Promise(r => setTimeout(r, 1000)); // 1s buffer for key sync
+            } catch (pErr) {
+                logger.warn(`Presence update failed for ${jid}: ${pErr.message}`);
+            }
+
             await sock.sendMessage(jid, messagePayload);
         }
     }
@@ -294,14 +316,19 @@ async function connectToWhatsApp() {
 
     /**
      * Heartbeat Logic: Ensures the socket stays active by performing
-     * a light status check every 30 minutes.
+     * a light status check every 30 minutes (safely prevents stale connections).
      */
-    setInterval(async () => {
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+    heartbeatInterval = setInterval(async () => {
         if (isConnected && sock) {
             try {
                 // Perform a light query to verify socket health
                 await sock.query({ tag: 'iq', attrs: { type: 'get', xmlns: 'w:p', to: '@s.whatsapp.net' }, content: [] });
                 logger.info('Socket Heartbeat: Connection stable.');
+                
+                // Trigger Background Maintenance
+                const { purgeExpiredData } = require('./database');
+                purgeExpiredData();
             } catch (err) {
                 logger.warn('Socket Heartbeat: Ping failed. Potential stale connection.');
             }
@@ -398,9 +425,13 @@ async function sendBatch(recipient, items, logId) {
                 default: continue;
             }
 
-            let attempt = 0;
-            let success = false;
-            let lastError = null;
+            // [SYNC WARMUP] Send composing presence to force E2E key exchange
+            try {
+                await sock.sendPresenceUpdate('composing', jid);
+                await new Promise(r => setTimeout(r, 1000)); // 1s buffer for key sync
+            } catch (pErr) {
+                logger.warn(`Presence update failed for ${jid}: ${pErr.message}`);
+            }
 
             while (attempt <= maxRetries && !success) {
                 try {
@@ -438,6 +469,7 @@ module.exports = {
     connectToWhatsApp,
     sendBatch,
     enqueue: (recipient, items, isPriority, auditId) => queue.enqueue(recipient, items, isPriority, auditId),
+    getQueue: () => queue,
     getQueueStatus: () => ({ isProcessing: queue.isProcessing }),
     getAllGroups,
     getLatestQR: () => latestQR,

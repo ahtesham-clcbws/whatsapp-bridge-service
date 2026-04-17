@@ -15,6 +15,7 @@ const path = require('path');
 const logger = require('./logger');
 
 const logsDir = path.join(process.cwd(), 'logs');
+const connectionPromises = {}; // Cache Promises to prevent initialization race conditions
 
 // Ensure the logs directory exists
 if (!fs.existsSync(logsDir)) {
@@ -22,14 +23,17 @@ if (!fs.existsSync(logsDir)) {
 }
 
 /**
- * Returns a connection to the permanent system database (for sessions, config, etc.)
- * @returns {Promise<sqlite3.Database>}
+ * Returns a connection to the permanent system database.
+ * Uses Promise-caching to prevent "no such table" errors during rapid startup.
  */
 function getSystemDatabase() {
-    const dbPath = path.join(logsDir, `system.db`);
-    return new Promise((resolve, reject) => {
+    if (connectionPromises['system']) return connectionPromises['system'];
+
+    connectionPromises['system'] = new Promise((resolve, reject) => {
+        const dbPath = path.join(logsDir, `system.db`);
         const db = new sqlite3.Database(dbPath, (err) => {
             if (err) return reject(err);
+            
             db.serialize(() => {
                 db.run(`CREATE TABLE IF NOT EXISTS admin_sessions (
                     token TEXT PRIMARY KEY,
@@ -50,61 +54,15 @@ function getSystemDatabase() {
                     is_priority INTEGER DEFAULT 0,
                     retry_count INTEGER DEFAULT 0,
                     last_error TEXT,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    audit_id INTEGER
                 )`);
-
-                // Auto-Migration: Add audit_id if missing
-                db.all("PRAGMA table_info(pending_queue)", (err, columns) => {
-                    if (err || !columns) return;
-                    const hasAuditId = columns.some(c => c.name === 'audit_id');
-                    if (!hasAuditId) {
-                        db.run("ALTER TABLE pending_queue ADD COLUMN audit_id INTEGER");
-                    }
-                });
-
                 resolve(db);
             });
         });
     });
-}
 
-/**
- * Retrieves all items in the pending queue, ordered by priority and then creation date.
- */
-async function getPendingQueue() {
-    const db = await getSystemDatabase();
-    return new Promise((resolve, reject) => {
-        db.all(`SELECT * FROM pending_queue ORDER BY is_priority DESC, created_at ASC`, [], (err, rows) => {
-            if (err) return reject(err);
-            resolve(rows);
-        });
-    });
-}
-
-/**
- * Removes an item from the pending queue.
- */
-async function deleteQueueItem(id) {
-    const db = await getSystemDatabase();
-    return new Promise((resolve, reject) => {
-        db.run(`DELETE FROM pending_queue WHERE id = ?`, [id], (err) => {
-            if (err) return reject(err);
-            resolve();
-        });
-    });
-}
-
-/**
- * Updates a queue item (e.g., after a failed attempt).
- */
-async function updateQueueItem(id, retryCount, lastError) {
-    const db = await getSystemDatabase();
-    return new Promise((resolve, reject) => {
-        db.run(`UPDATE pending_queue SET retry_count = ?, last_error = ? WHERE id = ?`, [retryCount, lastError, id], (err) => {
-            if (err) return reject(err);
-            resolve();
-        });
-    });
+    return connectionPromises['system'];
 }
 
 /**
@@ -123,23 +81,18 @@ function getCurrentWeekId() {
 
 /**
  * Initializes/Connects to the database for the current week.
- * Includes auto-migration to ensure all necessary columns exist.
- * @returns {Promise<sqlite3.Database>}
+ * Uses Promise-caching to ensure tables are created before any queries run.
  */
 function getDatabase() {
     const weekId = getCurrentWeekId();
-    const dbPath = path.join(logsDir, `audit_${weekId}.db`);
-    
-    return new Promise((resolve, reject) => {
+    if (connectionPromises[weekId]) return connectionPromises[weekId];
+
+    connectionPromises[weekId] = new Promise((resolve, reject) => {
+        const dbPath = path.join(logsDir, `audit_${weekId}.db`);
         const db = new sqlite3.Database(dbPath, (err) => {
-            if (err) {
-                logger.error(`SQLite Connection Error: ${err.message}`);
-                return reject(err);
-            }
+            if (err) return reject(err);
             
-            // Create/Upgrade Audit Logs table
             db.serialize(() => {
-                // Initial Table Creation
                 db.run(`
                     CREATE TABLE IF NOT EXISTS audit_logs (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -153,30 +106,22 @@ function getDatabase() {
                         retry_count INTEGER DEFAULT 0
                     )
                 `);
-                
-                // Index for analytics performance
                 db.run(`CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp)`);
-
-                // Auto-Migration: Add whatsapp_id if missing from early v1.x databases
+                
+                // Ensure columns exist (v1.x -> v3.x migration)
                 db.all("PRAGMA table_info(audit_logs)", (err, columns) => {
                     if (err) return;
                     const hasWhatsappId = columns.some(c => c.name === 'whatsapp_id');
                     const hasRetryCount = columns.some(c => c.name === 'retry_count');
-
-                    if (!hasWhatsappId) {
-                        db.run("ALTER TABLE audit_logs ADD COLUMN whatsapp_id TEXT");
-                        logger.info('Database Migration: Added whatsapp_id column');
-                    }
-                    if (!hasRetryCount) {
-                        db.run("ALTER TABLE audit_logs ADD COLUMN retry_count INTEGER DEFAULT 0");
-                        logger.info('Database Migration: Added retry_count column');
-                    }
+                    if (!hasWhatsappId) db.run("ALTER TABLE audit_logs ADD COLUMN whatsapp_id TEXT");
+                    if (!hasRetryCount) db.run("ALTER TABLE audit_logs ADD COLUMN retry_count INTEGER DEFAULT 0");
+                    resolve(db);
                 });
-
-                resolve(db);
             });
         });
     });
+
+    return connectionPromises[weekId];
 }
 
 /**
@@ -277,6 +222,59 @@ async function deleteAuditLog(id, weekId) {
     });
 }
 
+/**
+ * Retrieves all items in the pending queue.
+ */
+async function getPendingQueue() {
+    const db = await getSystemDatabase();
+    return new Promise((resolve, reject) => {
+        db.all(`SELECT * FROM pending_queue ORDER BY is_priority DESC, created_at ASC`, [], (err, rows) => {
+            if (err) return reject(err);
+            resolve(rows);
+        });
+    });
+}
+
+/**
+ * Removes an item from the pending queue.
+ */
+async function deleteQueueItem(id) {
+    const db = await getSystemDatabase();
+    return new Promise((resolve, reject) => {
+        db.run(`DELETE FROM pending_queue WHERE id = ?`, [id], (err) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+/**
+ * Updates a queue item (after failure or retry).
+ */
+async function updateQueueItem(id, retryCount, lastError) {
+    const db = await getSystemDatabase();
+    return new Promise((resolve, reject) => {
+        db.run(`UPDATE pending_queue SET retry_count = ?, last_error = ? WHERE id = ?`, [retryCount, lastError, id], (err) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+/**
+ * Background Maintenance: Purges expired sessions and old queue items.
+ */
+async function purgeExpiredData() {
+    try {
+        const sysDb = await getSystemDatabase();
+        sysDb.run(`DELETE FROM admin_sessions WHERE expires_at < datetime('now')`);
+        sysDb.run(`DELETE FROM pending_queue WHERE created_at < datetime('now', '-3 days') AND retry_count = 0`);
+        logger.info('Database Maintenance: Successfully purged expired data.');
+    } catch (err) {
+        logger.error('Database Maintenance Error:', err);
+    }
+}
+
 module.exports = {
     getDatabase,
     getSystemDatabase,
@@ -285,5 +283,6 @@ module.exports = {
     deleteQueueItem,
     updateQueueItem,
     getHistoricalAnalytics,
-    deleteAuditLog
+    deleteAuditLog,
+    purgeExpiredData
 };

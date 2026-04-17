@@ -35,7 +35,7 @@ router.get('/stats', async (req, res) => {
                 connected: isWhatsAppConnected(),
                 cpu_load: os.loadavg()[0].toFixed(2),
                 ram_usage: ((1 - os.freemem() / os.totalmem()) * 100).toFixed(0),
-                version: '3.7.0',
+                version: '3.8.0',
                 queue: getQueueStatus()
             },
             metrics: {
@@ -144,6 +144,68 @@ router.get('/logs/recent', async (req, res) => {
         res.json(logs);
     } catch (e) {
         res.status(500).json({ error: 'Failed to fetch recent logs.' });
+    }
+});
+
+/**
+ * Filtered Failure Report
+ * GET /api/admin/reports/failed
+ */
+router.get('/reports/failed', async (req, res) => {
+    try {
+        const db = await getDatabase();
+        const failures = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM audit_logs WHERE status = 'Failed' ORDER BY timestamp DESC LIMIT 100`, 
+                [], 
+                (err, rows) => { if (err) reject(err); else resolve(rows); }
+            );
+        });
+        // Attach the current weekId for retry context
+        const weekId = require('../database').getCurrentWeekId();
+        res.json(failures.map(f => ({ ...f, weekId })));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to generate failure report.' });
+    }
+});
+
+/**
+ * Retry a Failed Message
+ * POST /api/admin/retry/:id
+ */
+router.post('/retry/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { week } = req.query;
+        if (!week) return res.status(400).json({ error: 'Week context required.' });
+
+        const database = require('../database');
+        const dbPath = path.join(process.cwd(), 'logs', `audit_${week}.db`);
+        
+        // 1. Fetch the failed message data
+        const record = await new Promise((resolve, reject) => {
+            const db = new (require('sqlite3').Database)(dbPath, (err) => {
+                if (err) reject(err);
+                db.get(`SELECT * FROM audit_logs WHERE id = ?`, [id], (err, row) => {
+                    db.close();
+                    if (err) reject(err); else resolve(row);
+                });
+            });
+        });
+
+        if (!record) return res.status(404).json({ error: 'Failure record not found.' });
+
+        // 2. Re-enqueue into the system
+        const { enqueue } = require('../whatsapp').getQueue(); 
+        const items = [{ type: record.type, [record.type === 'text' ? 'text' : 'msg']: record.metadata }];
+        
+        // Handle media if buffer exists (simplified for now as retry mostly for text/reports)
+        await require('../whatsapp').enqueue(record.recipient, items, true, record.id);
+
+        res.json({ status: 'success', message: 'Message re-enqueued for retry.' });
+    } catch (err) {
+        logger.error('Retry Error:', err);
+        res.status(500).json({ error: err.message });
     }
 });
 

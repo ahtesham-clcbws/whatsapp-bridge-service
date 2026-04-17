@@ -1,12 +1,12 @@
-# 🆙 Upgrade Guide (v3.7.0)
+# 🆙 Upgrade Guide (v3.8.0)
 
-Keeping your **WhatsApp Bridge Service** up to date ensures you have the latest security patches, performance optimizations, and features like the v3.7.0 Analytics Dashboard.
+Keeping your **WhatsApp Bridge Service** up to date ensures you have the latest security patches, performance optimizations, and features like the v3.8.0 Analytics Dashboard.
 
 ---
 
 ## 🛠️ Option 1: The Automated Script (Recommended)
 
-Beginning with v3.7.0, we provide a hardened upgrade script that handles backups, dependency refreshes, and environment variable synchronization automatically.
+Beginning with v3.8.0, we provide a hardened upgrade script that handles backups, dependency refreshes, and environment variable synchronization automatically.
 
 ### Running the Script:
 1.  **Connect** to your server via SSH.
@@ -20,7 +20,7 @@ Beginning with v3.7.0, we provide a hardened upgrade script that handles backups
 ### What the script does:
 *   **Safety Backup**: Creates a `.tar.gz` archive of your current files (excluding `node_modules`).
 *   **Git Sync**: Pulls the latest code from the `master` branch.
-*   **Env Sync**: Automatically detects missing v3.7.0 keys (like `API_KEY` and `SESSION_SECRET`) and appends them to your `.env` with secure random values.
+*   **Env Sync**: Automatically detects missing v3.8.0 keys (like `API_KEY` and `SESSION_SECRET`) and appends them to your `.env` with secure random values.
 *   **Dependency Refresh**: Runs `npm install` to update core libraries.
 *   **Idempotent Restart**: Restarts the service via PM2.
 
@@ -37,7 +37,7 @@ git reset --hard origin/master
 ```
 
 ### 2. Refresh Dependencies
-New features in v3.7.0 require `pino`, `sqlite3`, and `multer`.
+New features in v3.8.0 require `pino`, `sqlite3`, and `multer`.
 ```bash
 npm install --omit=dev
 ```
@@ -50,7 +50,7 @@ Open your `.env` file and ensure the following keys are present:
 *   `MAX_RETRIES`: Reconnection limit (e.g., 3).
 
 ### 4. Cleanup Legacy Files
-In v3.7.0, the monolithic `server.js` was moved to `src/server.js`. 
+In v3.8.0, the monolithic `server.js` was moved to `src/server.js`. 
 - **Action**: Rename or delete any `server.js` or `database.js` files remaining in your root directory to avoid naming conflicts with the new modular structure.
 - **Entry Point**: Ensure your PM2 or startup script points to `src/index.js`.
 

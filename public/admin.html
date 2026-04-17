@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bridge Command v3.7</title>
+    <title>Bridge Command v3.8</title>
     <link rel="icon" type="image/png" href="/dashboard/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -28,7 +28,7 @@
         <div class="flex items-center gap-4">
             <div class="flex items-center gap-2">
                 <img src="/dashboard/logo.png" alt="Logo" class="w-5 h-5">
-                <h1 class="text-xs font-black tracking-tighter uppercase italic">Bridge <span class="wa-accent">v3.7</span></h1>
+                <h1 class="text-xs font-black tracking-tighter uppercase italic">Bridge <span class="wa-accent">v3.8</span></h1>
             </div>
             <div class="h-4 w-px bg-white/10"></div>
             <div class="flex items-center gap-3 font-bold text-[8px] uppercase tracking-widest">
@@ -48,6 +48,7 @@
         <button onclick="switchTab('telemetry')" id="tab-telemetry" class="pb-2 px-1 tab-active transition-all">Telemetry</button>
         <button onclick="switchTab('orchestrator')" id="tab-orchestrator" class="pb-2 px-1 text-gray-500 transition-all">Orchestrate</button>
         <button onclick="switchTab('queue')" id="tab-queue" class="pb-2 px-1 text-gray-500 transition-all">Queue</button>
+        <button onclick="switchTab('failures')" id="tab-failures" class="pb-2 px-1 text-gray-500 transition-all">Failures</button>
         <button onclick="switchTab('logs')" id="tab-logs" class="pb-2 px-1 text-gray-500 transition-all">System Logs</button>
         <button onclick="switchTab('directory')" id="tab-directory" class="pb-2 px-1 text-gray-500 transition-all">Groups</button>
         <button onclick="switchTab('vault')" id="tab-vault" class="pb-2 px-1 text-gray-500 transition-all">Vault</button>
@@ -179,6 +180,35 @@
             </div>
         </div>
 
+        <!-- PANE: FAILURE LOG -->
+        <div id="pane-failures" class="tab-pane animate-in">
+            <div class="glass p-4 rounded-2xl">
+                <div class="flex justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-[9px] font-black uppercase tracking-widest italic text-red-500">Failure Diagnostics</h2>
+                        <span class="px-2 py-0.5 rounded bg-red-500/10 text-red-500 text-[6px] font-black uppercase">Technical Audit</span>
+                    </div>
+                    <button onclick="fetchFailures()" class="text-[7px] font-black border border-white/10 px-3 py-1 rounded uppercase hover:bg-white/5 transition-all">Refresh Report</button>
+                </div>
+                <div class="overflow-x-auto text-[9px]">
+                    <table class="w-full text-left uppercase">
+                        <thead>
+                            <tr class="text-[7px] text-gray-500 tracking-widest border-b border-white/5">
+                                <th class="pb-2">Timestamp</th>
+                                <th class="pb-2">Recipient</th>
+                                <th class="pb-2">Technical Error</th>
+                                <th class="pb-2 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="failureTableBody" class="font-medium tracking-tight">
+                            <!-- Populated via JS -->
+                            <tr><td colspan="4" class="py-10 text-center text-gray-700 italic">No failure reports generated.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- PANE: SYSTEM LOGS -->
         <div id="pane-logs" class="tab-pane animate-in max-w-5xl mx-auto">
             <div class="glass p-4 rounded-2xl space-y-4">
@@ -302,6 +332,7 @@
                document.getElementById('sendFile').onchange = (e) => document.getElementById('fileName').innerText = e.target.files[0]?.name.toUpperCase() || '';
             }
             if (id === 'queue') fetchQueue();
+            if (id === 'failures') fetchFailures();
             if (id === 'directory') fetchGroups();
             if (id === 'logs') fetchLogDates();
             if (id === 'vault') renderTemplates();
@@ -385,6 +416,43 @@
             if (confirm("Purge message?")) {
                 const d = await api(`/api/admin/queue/${id}`, 'DELETE');
                 if (d.status === 'success') refreshStats();
+            }
+        }
+
+        async function fetchFailures() {
+            const tb = document.getElementById('failureTableBody');
+            tb.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-gray-700 italic">Analyzing weekly logs...</td></tr>';
+            const data = await api('/api/admin/reports/failed');
+            if (!data.length) {
+                tb.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-gray-700 italic">No failures detected in current window.</td></tr>';
+                return;
+            }
+            tb.innerHTML = data.map(f => `
+                <tr class="border-b border-white/5 hover:bg-white/5 group">
+                    <td class="py-2.5 text-gray-500 font-mono">${formatDate(f.timestamp)}</td>
+                    <td class="py-2.5 font-bold">${f.recipient}</td>
+                    <td class="py-2.5 text-red-400 capitalize break-all max-w-[200px]">${f.error || 'Unknown Socket Error'}</td>
+                    <td class="py-2.5 text-right">
+                        <button onclick="retryFailure('${f.id}', '${f.weekId}')" class="wa-accent border border-green-500/10 px-2 py-0.5 rounded uppercase hover:wa-bg hover:text-black transition-all">Retry</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function retryFailure(id, week) {
+            const btn = event.target;
+            btn.innerText = 'RETRYING...';
+            try {
+                const d = await api(`/api/admin/retry/${id}?week=${week}`, 'POST');
+                if (d.status === 'success') {
+                    btn.innerText = 'ENQUEUED';
+                    setTimeout(fetchFailures, 2000);
+                } else {
+                    alert('Retry failed: ' + d.error);
+                    btn.innerText = 'RETRY';
+                }
+            } catch(e) {
+                btn.innerText = 'RETRY';
             }
         }
 
