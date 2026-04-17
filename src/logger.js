@@ -20,7 +20,8 @@ const levels = ['info', 'warn', 'error'];
 if (isDebugMode) levels.push('debug');
 
 const streams = [
-    { level: 'info', stream: process.stdout }
+    { level: 'info', stream: process.stdout },
+    { level: 'trace', stream: createPartitionedStream('console') } // Unified Console Stream
 ];
 
 // Memory cache for active level-specific write streams
@@ -57,7 +58,7 @@ function createPartitionedStream(lvl) {
 
             try {
                 const log = JSON.parse(str);
-                if (log.level === lvlNum || (lvl === 'debug' && log.level <= 20)) {
+                if (lvl === 'console' || log.level === lvlNum || (lvl === 'debug' && log.level <= 20)) {
                     activeFileStreams[lvl].write(str);
                 }
             } catch (e) {

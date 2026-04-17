@@ -221,10 +221,11 @@
                     </div>
                     <div class="flex gap-2 flex-grow max-w-sm">
                         <select id="logFileSelect" onchange="fetchSystemLogs()" class="bg-black border border-white/10 text-[8px] font-black p-1.5 rounded outline-none uppercase flex-grow"></select>
-                        <select id="logLevelSelect" onchange="fetchSystemLogs()" class="bg-black border border-white/10 text-[8px] font-black p-1.5 rounded outline-none uppercase w-24">
-                            <option value="ERROR">ERROR</option>
+                        <select id="logLevelSelect" onchange="fetchSystemLogs()" class="bg-black border border-white/10 text-[8px] font-black p-1.5 rounded outline-none uppercase w-32">
+                            <option value="CONSOLE" selected>CONSOLE (ALL)</option>
+                            <option value="INFO">INFO</option>
                             <option value="WARN">WARN</option>
-                            <option value="INFO" selected>INFO</option>
+                            <option value="ERROR">ERROR</option>
                             <option value="DEBUG">DEBUG / TRACE</option>
                         </select>
                     </div>
@@ -583,7 +584,9 @@
             const disp = document.getElementById('systemLogsDisplay');
             
             const filtered = globalSystemLogs.filter(log => {
-                const lName = log.level >= 50 ? 'ERROR' : log.level >= 40 ? 'WARN' : log.level >= 30 ? 'INFO' : 'DEBUG';
+                const lName = log.type === 'raw' ? 'CONSOLE' : (log.level >= 50 ? 'ERROR' : log.level >= 40 ? 'WARN' : log.level >= 30 ? 'INFO' : 'DEBUG');
+                // CONSOLE mode shows everything
+                if (levelTarget === 'CONSOLE') return true;
                 if (levelTarget && lName !== levelTarget && !(levelTarget === 'DEBUG' && log.level < 30)) return false;
                 if (q && !JSON.stringify(log).toLowerCase().includes(q)) return false;
                 return true;
@@ -593,14 +596,15 @@
                 const isErr = log.level >= 50;
                 const isWarn = log.level >= 40 && log.level < 50;
                 const isInfo = log.level >= 30 && log.level < 40;
-                const color = isErr ? 'text-red-400' : isWarn ? 'text-yellow-400' : isInfo ? 'text-green-400' : 'text-gray-500';
-                const lvlName = isErr ? 'ERR' : isWarn ? 'WRN' : isInfo ? 'INF' : 'DBG';
-                const time = new Date(log.time).toLocaleTimeString([], { hour12: false });
-                const msg = log.msg || '';
+                const isRaw = log.type === 'raw';
+                const color = isErr ? 'text-red-400' : isWarn ? 'text-yellow-400' : (isInfo || isRaw) ? 'text-green-400' : 'text-gray-500';
+                const lvlName = isErr ? 'ERR' : isWarn ? 'WRN' : (isInfo || isRaw) ? 'INF' : 'DBG';
+                const time = log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour12: false }) : (log.time ? new Date(log.time).toLocaleTimeString([], { hour12: false }) : '??:??');
+                const msg = log.msg || log.message || JSON.stringify(log);
                 
                 // Copy safe for printing
                 const safeLog = Object.assign({}, log);
-                delete safeLog.level; delete safeLog.time; delete safeLog.msg; delete safeLog.pid; delete safeLog.hostname;
+                delete safeLog.level; delete safeLog.time; delete safeLog.msg; delete safeLog.pid; delete safeLog.hostname; delete safeLog.timestamp; delete safeLog.type;
                 const meta = Object.keys(safeLog).length > 0 ? JSON.stringify(safeLog) : '';
                 return `<div class="mb-1 pb-1 border-b border-white/5"><span class="text-gray-500">[${time}]</span> <span class="${color} font-black w-8 inline-block">${lvlName}</span> <span class="text-white">${msg}</span> <span class="text-gray-600">${meta}</span></div>`;
             }).join('');

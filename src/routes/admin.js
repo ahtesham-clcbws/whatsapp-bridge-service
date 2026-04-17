@@ -35,7 +35,7 @@ router.get('/stats', async (req, res) => {
                 connected: isWhatsAppConnected(),
                 cpu_load: os.loadavg()[0].toFixed(2),
                 ram_usage: ((1 - os.freemem() / os.totalmem()) * 100).toFixed(0),
-                version: '3.8.1',
+                version: '3.8.2',
                 queue: getQueueStatus()
             },
             metrics: {
@@ -118,15 +118,32 @@ router.get('/logs', (req, res) => {
     let logs = [];
     try {
         if (fs.existsSync(logFile)) {
-            const lines = fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean);
+            const rawContent = fs.readFileSync(logFile, 'utf8');
+            const lines = rawContent.split('\n').filter(Boolean);
             logs = lines.map(l => { 
-                try { return JSON.parse(l); } 
-                catch(e){ return null; } 
+                try { 
+                    const parsed = JSON.parse(l);
+                    // Add human readable time if it's missing but we have a pino timestamp
+                    if (parsed.time && !parsed.timestamp) parsed.timestamp = new Date(parsed.time).toISOString();
+                    return parsed;
+                } 
+                catch(e){ 
+                    // If it's not JSON, return it as a raw console entry
+                    return { level: 30, msg: l, timestamp: new Date().toISOString(), type: 'raw' }; 
+                } 
             }).filter(Boolean);
         }
         
         // Return logs sorted by time (latest first)
-        logs.sort((a, b) => (b.time || 0) - (a.time || 0));
+        logs.sort((a, b) => {
+            const timeA = a.time || new Date(a.timestamp).getTime();
+            const timeB = b.time || new Date(b.timestamp).getTime();
+            return timeB - timeA;
+        });
+
+        // Limit to last 100 lines if it's the console view
+        if (level === 'console') logs = logs.slice(0, 100);
+
         res.json(logs);
     } catch(e) {
         res.status(500).json({ error: 'Failed to parse logs.' });

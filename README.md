@@ -2,13 +2,13 @@
   <img src="./logo.png" alt="WhatsApp Bridge Service Logo" width="200">
 </div>
 
-# 🚀 WhatsApp Bridge Service (v3.8.1)
+# 🚀 WhatsApp Bridge Service (v3.8.2)
 
 A generic, headless, and modular **WhatsApp-to-HTTP Bridge** designed for reliable automated messaging. Built with Node.js and the Baileys library, this service provides a high-level API to dispatch text and media messages to individuals and groups with enterprise-grade stability.
 
 ---
 
-## ✨ Current Feature Suite (v3.8.1)
+## ✨ Current Feature Suite (v3.8.2)
 
 - `[x]` **Interactive Admin Dashboard**: Lightweight, mobile-first UI for instance management, log browsing, and orchestrating messages securely.
 - `[x]` **Hardware Telemetry Console**: Real-time monitoring of CPU Load, Memory Usage, and Server Uptime.

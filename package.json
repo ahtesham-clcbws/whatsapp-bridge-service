@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-bridge-service",
-  "version": "3.8.1",
+  "version": "3.8.2",
   "description": "A generic, headless, and modular WhatsApp to HTTP bridge service. Securely dispatch messages, images, and documents via a high-level multipart API.",
   "main": "src/index.js",
   "author": "Ahtesham",

@@ -1,5 +1,5 @@
 /**
- * WhatsApp Bridge Service - API Server [v3.8.1]
+ * WhatsApp Bridge Service - API Server [v3.8.2]
  * ------------------------------------------------
  * Core entry point for the bridge service. Orchestrates modular 
  * routers for authentication, session management, and messaging.
